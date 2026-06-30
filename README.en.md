@@ -16,22 +16,6 @@ SuperNoNo is not a chatbot replacement for Codex. It is a lightweight interactio
 - Highlights moments that require user action.
 - Provides a prototype event model for future Codex integration.
 
-## Repository Name Recommendation
-
-For a public GitHub repository, the recommended name is:
-
-```text
-codex-task-pet
-```
-
-The product display name can remain:
-
-```text
-SuperNoNo for Codex
-```
-
-This keeps the repository name functional and open-source friendly while preserving SuperNoNo as the product codename. See [REPOSITORY_NAMING.md](REPOSITORY_NAMING.md) for more naming options.
-
 ## Features
 
 - Desktop pet: Electron transparent window, draggable, and hideable.
@@ -84,7 +68,6 @@ SuperNoNo/
 ├── tools/                 Local utility scripts
 ├── assets/                Original icons and redistributable assets
 ├── SuperNoNo_PRD.md       Product requirements document
-├── REPOSITORY_NAMING.md   Repository naming and open-source guidance
 ├── README.md              Simplified Chinese README
 ├── README.en.md           English README
 └── README.zh-TW.md        Traditional Chinese README
@@ -151,4 +134,3 @@ This is product and open-source publishing guidance, not legal advice. If the pr
 MIT License is recommended for the code.
 
 Note: the MIT License only applies to code and original assets that you have the right to open source. It does not automatically license third-party assets, game IP, Live2D models, or external project resources.
-

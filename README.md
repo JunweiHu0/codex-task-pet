@@ -16,22 +16,6 @@ SuperNoNo 不是一个替代 Codex 的聊天机器人，而是一个位于 Codex
 - 在需要用户操作时给出清晰提醒。
 - 为未来接入真实 Codex 事件流提供原型。
 
-## 仓库命名建议
-
-如果准备公开到 GitHub，推荐使用：
-
-```text
-codex-task-pet
-```
-
-产品展示名可以继续使用：
-
-```text
-SuperNoNo for Codex
-```
-
-这样可以让仓库名更偏功能和开源语境，同时保留 SuperNoNo 作为产品代号。更多命名方案见 [REPOSITORY_NAMING.md](REPOSITORY_NAMING.md)。
-
 ## 功能特性
 
 - 桌面宠物：Electron 透明窗口、可拖拽、可隐藏。
@@ -84,7 +68,6 @@ SuperNoNo/
 ├── tools/                 本地工具脚本
 ├── assets/                原创图标和公开可用素材
 ├── SuperNoNo_PRD.md       产品 PRD
-├── REPOSITORY_NAMING.md   仓库命名与开源发布建议
 ├── README.md              简体中文 README
 ├── README.en.md           English README
 └── README.zh-TW.md        繁體中文 README
@@ -151,4 +134,3 @@ SuperNoNo.signal('completed', {
 代码建议使用 MIT License。
 
 注意：MIT License 只适用于本仓库中你有权开源的代码和原创素材，不会自动授权第三方素材、游戏 IP、Live2D 模型或外部项目资源。
-
