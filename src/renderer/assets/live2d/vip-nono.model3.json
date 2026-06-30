@@ -1,0 +1,26 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "nono/model.moc3",
+    "Textures": [
+      "nono/texture_00.png"
+    ],
+    "Physics": "nono/model.physics3.json",
+    "DisplayInfo": "nono/model.cdi3.json",
+    "Motions": {
+      "Charge": [{ "File": "nono/motion/Charge.motion3.json" }],
+      "Nope": [{ "File": "nono/motion/Nope.motion3.json" }],
+      "Yawn": [{ "File": "nono/motion/Yawn.motion3.json" }],
+      "Failed": [{ "File": "nono/motion/Failed.motion3.json" }],
+      "Happy": [{ "File": "nono/motion/Happy.motion3.json" }],
+      "Sweat": [{ "File": "nono/motion/Sweat.motion3.json" }],
+      "Sleepy": [{ "File": "nono/motion/Sleepy.motion3.json" }],
+      "Dance": [{ "File": "nono/motion/Dance.motion3.json" }],
+      "JoyJump": [{ "File": "nono/motion/JoyJump.motion3.json" }]
+    }
+  },
+  "Groups": [
+    { "Target": "Parameter", "Name": "EyeBlink", "Ids": ["ParamEyeLOpen", "ParamEyeROpen"] },
+    { "Target": "Parameter", "Name": "LipSync", "Ids": ["ParamMouthOpenY"] }
+  ]
+}

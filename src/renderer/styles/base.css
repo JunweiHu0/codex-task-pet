@@ -1,0 +1,175 @@
+/* base.css — theme tokens, reset and overlay layout.
+ * Colours follow PRD §7.2 (base white/silver/grey + status colours). */
+
+:root {
+  /* status colours (PRD §7.2) */
+  --sn-c-blue: #3da5ff;   /* 思考 / 分析 */
+  --sn-c-green: #2dd4a7;  /* 完成 / 测试通过 */
+  --sn-c-yellow: #ffc53d; /* 等待确认 */
+  --sn-c-red: #ff5d6c;    /* 错误 / 阻塞 */
+  --sn-c-purple: #a78bfa; /* 技能模块激活 */
+  --sn-c-neutral: #8fb6c9;/* 待机低亮 */
+
+  /* surfaces */
+  --sn-surface: rgba(20, 26, 38, 0.92);
+  --sn-surface-2: rgba(30, 38, 54, 0.92);
+  --sn-border: rgba(255, 255, 255, 0.10);
+  --sn-border-strong: rgba(255, 255, 255, 0.18);
+  --sn-text: #eef3f9;
+  --sn-text-dim: #9aa7b8;
+  --sn-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  --sn-radius: 16px;
+  --sn-font: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: transparent;            /* transparent in the Electron overlay */
+  font-family: var(--sn-font);
+  color: var(--sn-text);
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* When opened directly in a browser (demo mode) paint a desk backdrop so the
+   transparent pet is visible. app.js adds .sn-demo to <body>. */
+body.sn-demo {
+  background:
+    radial-gradient(1200px 600px at 75% -10%, #2a3550 0%, transparent 60%),
+    linear-gradient(160deg, #0f1420 0%, #161d2c 60%, #0b0f18 100%);
+}
+
+.sn-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 16px;
+}
+
+/* Dock positions (PRD §9.1) */
+body[data-dock="bottom-left"] .sn-root { align-items: flex-start; justify-content: flex-end; }
+body[data-dock="bottom-right"] .sn-root { align-items: flex-end; justify-content: flex-end; }
+body[data-dock="sidebar-top"] .sn-root { align-items: flex-end; justify-content: flex-start; }
+
+/* ----------------------------------------------------------------------- */
+/* shared small controls */
+.sn-iconbtn {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: 1px solid var(--sn-border);
+  background: var(--sn-surface-2);
+  color: var(--sn-text);
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.sn-iconbtn:hover { background: rgba(255, 255, 255, 0.14); }
+.sn-iconbtn:active { transform: scale(0.94); }
+
+.sn-btn {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: 1px solid var(--sn-border-strong);
+  background: linear-gradient(180deg, #2b6cff, #2356d6);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.sn-btn:hover { filter: brightness(1.08); }
+.sn-btn:active { transform: translateY(1px); }
+.sn-btn--ghost { background: transparent; color: var(--sn-text); }
+.sn-btn--danger { background: linear-gradient(180deg, #ff5d6c, #d6394a); }
+.sn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--sn-border);
+  background: var(--sn-surface-2);
+}
+
+/* Minimized status dot (PRD §9.1) */
+.sn-dot {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: 1px solid var(--sn-border-strong);
+  background: var(--sn-surface);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--sn-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sn-dot__core {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--sn-c-neutral);
+  box-shadow: 0 0 10px 2px currentColor;
+  color: var(--sn-c-neutral);
+}
+
+/* Developer / demo strip */
+.sn-devbar {
+  -webkit-app-region: no-drag;
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: 12px;
+  box-shadow: var(--sn-shadow);
+  font-size: 12px;
+  z-index: 50;
+}
+.sn-devbar strong { color: var(--sn-text-dim); font-weight: 600; margin-right: 4px; }
+.sn-devbar button {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: 1px solid var(--sn-border);
+  background: var(--sn-surface-2);
+  color: var(--sn-text);
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.sn-devbar button:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* Accessibility: reduced motion -> no animation (PRD §16) */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

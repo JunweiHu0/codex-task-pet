@@ -1,0 +1,62 @@
+/* bubble.css — task progress bubble (PRD §9.3). */
+
+.sn-bubble {
+  -webkit-app-region: no-drag;
+  position: relative;
+  max-width: 230px;
+  padding: 9px 13px;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border-strong);
+  border-radius: 14px;
+  box-shadow: var(--sn-shadow);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sn-text);
+  cursor: pointer;
+  transform-origin: bottom right;
+  animation: snBubbleIn 0.22s ease-out;
+}
+body[data-dock="bottom-left"] .sn-bubble { transform-origin: bottom left; }
+
+.sn-bubble[hidden] { display: none; }
+
+.sn-bubble__text { display: block; }
+
+/* little colour accent that tracks the current state */
+.sn-bubble::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 12px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--sn-bubble-accent, var(--sn-c-neutral));
+  box-shadow: 0 0 8px 1px var(--sn-bubble-accent, var(--sn-c-neutral));
+  display: none;
+}
+.sn-bubble[data-accent] { padding-left: 26px; }
+.sn-bubble[data-accent]::before { display: block; }
+
+.sn-bubble__tail {
+  position: absolute;
+  right: 26px;
+  bottom: -7px;
+  width: 14px; height: 14px;
+  background: var(--sn-surface);
+  border-right: 1px solid var(--sn-border-strong);
+  border-bottom: 1px solid var(--sn-border-strong);
+  transform: rotate(45deg);
+}
+body[data-dock="bottom-left"] .sn-bubble__tail { right: auto; left: 26px; }
+
+.sn-bubble--critical {
+  border-color: var(--sn-c-yellow);
+  box-shadow: 0 0 0 1px var(--sn-c-yellow), var(--sn-shadow);
+}
+
+@keyframes snBubbleIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+body[data-anim="off"] .sn-bubble { animation: none; }

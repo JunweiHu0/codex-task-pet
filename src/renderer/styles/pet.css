@@ -1,0 +1,238 @@
+/* pet.css — the dock card + the SuperNoNo creature and its per-state motion.
+ * Animations are gated by body[data-anim] (off | low | standard), PRD §13.2. */
+
+.sn-card {
+  -webkit-app-region: drag;          /* drag the whole pet to move the window */
+  position: relative;
+  width: 190px;
+  padding: 6px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: grab;
+}
+.sn-card:active { cursor: grabbing; }
+
+.sn-card__toolbar {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 3;
+}
+.sn-card:hover .sn-card__toolbar { opacity: 1; transform: none; }
+
+.sn-pet { display: block; overflow: visible; color: var(--sn-c-neutral); }
+
+/* Live2D NoNo stage — replaces the SVG once the model is ready. */
+.sn-live2d-stage { display: none; width: 188px; height: 214px; pointer-events: auto; }
+.sn-live2d-stage #sn-live2d-canvas { display: block; width: 100%; height: 100%; background: transparent; }
+body.sn-live2d-on .sn-live2d-stage { display: block; }
+body.sn-live2d-on .sn-pet { display: none; }
+
+/* status caption under the pet */
+.sn-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -6px;
+  padding: 3px 12px;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: 999px;
+  font-size: 12px;
+  box-shadow: var(--sn-shadow);
+  color: var(--sn-text);
+}
+.sn-card__dotstate {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; color: var(--sn-c-neutral);
+  box-shadow: 0 0 8px 1px currentColor;
+}
+
+/* =====================================================================
+ * STATE COLOURS — drives currentColor for core / eyes / antenna / leds
+ * ===================================================================== */
+.sn-pet[data-state="idle"]            { color: var(--sn-c-neutral); }
+.sn-pet[data-state="thinking"]        { color: var(--sn-c-blue); }
+.sn-pet[data-state="scanning"]        { color: var(--sn-c-blue); }
+.sn-pet[data-state="building"]        { color: var(--sn-c-purple); }
+.sn-pet[data-state="validating"]      { color: var(--sn-c-green); }
+.sn-pet[data-state="waiting_approval"]{ color: var(--sn-c-yellow); }
+.sn-pet[data-state="blocked"]         { color: var(--sn-c-red); }
+.sn-pet[data-state="completed"]       { color: var(--sn-c-green); }
+.sn-pet[data-state="resting"]         { color: #5d6b7d; }
+
+/* card caption colour follows pet */
+.sn-card[data-state="thinking"] .sn-card__dotstate,
+.sn-card[data-state="scanning"] .sn-card__dotstate { color: var(--sn-c-blue); }
+.sn-card[data-state="building"] .sn-card__dotstate { color: var(--sn-c-purple); }
+.sn-card[data-state="validating"] .sn-card__dotstate,
+.sn-card[data-state="completed"] .sn-card__dotstate { color: var(--sn-c-green); }
+.sn-card[data-state="waiting_approval"] .sn-card__dotstate { color: var(--sn-c-yellow); }
+.sn-card[data-state="blocked"] .sn-card__dotstate { color: var(--sn-c-red); }
+
+/* =====================================================================
+ * FLOAT + SHADOW (idle baseline)
+ * ===================================================================== */
+.sn-float { transform-box: fill-box; transform-origin: center; }
+.sn-shadow { transform-box: fill-box; transform-origin: center; }
+
+@keyframes snFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+@keyframes snShadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.18; }
+  50%      { transform: scaleX(0.86); opacity: 0.12; }
+}
+.sn-float  { animation: snFloat 3.6s ease-in-out infinite; }
+.sn-shadow { animation: snShadow 3.6s ease-in-out infinite; }
+
+/* =====================================================================
+ * EYES — blink (group) composes with per-state shape (each eye)
+ * ===================================================================== */
+.sn-eyes { transform-box: fill-box; transform-origin: center; }
+.sn-eye  { transform-box: fill-box; transform-origin: center; transition: transform 0.25s ease; }
+
+@keyframes snBlink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  94%           { transform: scaleY(0.08); }
+}
+.sn-eyes { animation: snBlink 5.2s ease-in-out infinite; }
+
+.sn-pet[data-state="thinking"] .sn-eye,
+.sn-pet[data-state="scanning"] .sn-eye  { transform: scaleY(0.78) translateY(1px); }
+.sn-pet[data-state="building"] .sn-eye  { transform: scaleY(0.85); }
+.sn-pet[data-state="validating"] .sn-eye{ transform: scaleY(0.9); }
+.sn-pet[data-state="waiting_approval"] .sn-eye { transform: scaleY(1.05); }
+.sn-pet[data-state="blocked"] .sn-eye   { transform: scaleY(0.42) translateY(3px); }
+.sn-pet[data-state="completed"] .sn-eye { transform: scaleY(0.5) translateY(-1px); }
+.sn-pet[data-state="resting"] .sn-eye   { transform: scaleY(0.14); }
+
+/* =====================================================================
+ * ENERGY CORE + ANTENNA pulse
+ * ===================================================================== */
+.sn-core { transform-box: fill-box; transform-origin: center; }
+.sn-antenna-tip { transform-box: fill-box; transform-origin: center; }
+
+@keyframes snCorePulse {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.12); filter: brightness(1.35); }
+}
+@keyframes snTipBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+.sn-core         { animation: snCorePulse 2.8s ease-in-out infinite; }
+.sn-antenna-tip  { animation: snTipBlink 2.8s ease-in-out infinite; }
+
+.sn-pet[data-state="thinking"] .sn-core  { animation-duration: 1.4s; }
+.sn-pet[data-state="idle"] .sn-core,
+.sn-pet[data-state="resting"] .sn-core   { animation-duration: 4.5s; opacity: 0.8; }
+
+/* =====================================================================
+ * SCANNING — sweeping beam + slow rotate
+ * ===================================================================== */
+@keyframes snBeam {
+  0%   { transform: translateY(-16px); opacity: 0; }
+  40%  { opacity: 0.9; }
+  100% { transform: translateY(18px); opacity: 0; }
+}
+.sn-beam { transform-box: fill-box; transform-origin: center; }
+.sn-pet[data-state="scanning"] .sn-beam { animation: snBeam 1.5s linear infinite; }
+.sn-pet[data-state="scanning"] .sn-float { animation: snFloat 3.6s ease-in-out infinite, snTilt 4s ease-in-out infinite; }
+
+@keyframes snTilt {
+  0%, 100% { rotate: -2deg; }
+  50%      { rotate: 2deg; }
+}
+
+/* =====================================================================
+ * BUILDING — sparks + tiny jitter
+ * ===================================================================== */
+@keyframes snSpark {
+  0%, 100% { opacity: 0; transform: translateY(0) scale(0.7); }
+  50%      { opacity: 1; transform: translateY(-3px) scale(1); }
+}
+.sn-sparks { transform-box: fill-box; transform-origin: center; }
+.sn-pet[data-state="building"] .sn-sparks { animation: snSpark 0.6s ease-in-out infinite; }
+.sn-pet[data-state="building"] .sn-body { animation: snJitter 0.18s linear infinite; }
+@keyframes snJitter {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-0.6px); }
+  75%      { transform: translateX(0.6px); }
+}
+.sn-body { transform-box: fill-box; transform-origin: center; }
+
+/* =====================================================================
+ * VALIDATING — expanding radar ring + green flicker
+ * ===================================================================== */
+@keyframes snRadar {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.sn-radar { transform-box: fill-box; transform-origin: center; }
+.sn-pet[data-state="validating"] .sn-radar { animation: snRadar 1.4s ease-out infinite; }
+
+/* =====================================================================
+ * WAITING APPROVAL — "!" badge bounce, float settles
+ * ===================================================================== */
+@keyframes snBang {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50%      { opacity: 1; transform: translateY(-4px); }
+}
+.sn-bang { transform-box: fill-box; transform-origin: center; }
+.sn-pet[data-state="waiting_approval"] .sn-bang { animation: snBang 0.9s ease-in-out infinite; }
+.sn-pet[data-state="waiting_approval"] .sn-float { animation-duration: 6s; }
+/* low-frequency blink once waiting > 5 min (engine sets data-lowpower) */
+.sn-pet[data-lowpower="true"] .sn-core { animation: snTipBlink 2.2s steps(2, end) infinite; }
+
+/* =====================================================================
+ * BLOCKED — sag + slight head down, dim
+ * ===================================================================== */
+.sn-pet[data-state="blocked"] .sn-float { animation: none; transform: translateY(4px) rotate(-4deg); }
+.sn-pet[data-state="blocked"] .sn-shadow { animation: none; opacity: 0.22; }
+
+/* =====================================================================
+ * COMPLETED — happy jump
+ * ===================================================================== */
+@keyframes snJump {
+  0%, 100% { transform: translateY(0); }
+  30%      { transform: translateY(-12px); }
+  45%      { transform: translateY(-12px); }
+  60%      { transform: translateY(0); }
+}
+.sn-pet[data-state="completed"] .sn-float { animation: snJump 1.1s ease-in-out 2; }
+
+/* =====================================================================
+ * RESTING — slow, dim
+ * ===================================================================== */
+.sn-pet[data-state="resting"] .sn-float { animation-duration: 6s; opacity: 0.85; }
+
+/* =====================================================================
+ * ANIMATION LEVELS (PRD §13.2 / §16)
+ * low      -> keep gentle float + blink, drop busy effects
+ * off      -> fully static (state still readable via colour/shape/text)
+ * ===================================================================== */
+body[data-anim="low"] .sn-beam,
+body[data-anim="low"] .sn-sparks,
+body[data-anim="low"] .sn-radar,
+body[data-anim="low"] .sn-body { animation: none !important; }
+
+body[data-anim="off"] .sn-float,
+body[data-anim="off"] .sn-shadow,
+body[data-anim="off"] .sn-eyes,
+body[data-anim="off"] .sn-core,
+body[data-anim="off"] .sn-antenna-tip,
+body[data-anim="off"] .sn-beam,
+body[data-anim="off"] .sn-sparks,
+body[data-anim="off"] .sn-radar,
+body[data-anim="off"] .sn-bang,
+body[data-anim="off"] .sn-body {
+  animation: none !important;
+}

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SuperNoNo</title>
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/pet.css" />
+    <link rel="stylesheet" href="styles/bubble.css" />
+    <link rel="stylesheet" href="styles/panel.css" />
+    <link rel="stylesheet" href="styles/settings.css" />
+  </head>
+  <body data-anim="standard" data-dock="bottom-right">
+    <!-- The whole overlay lives in one transparent always-on-top window.
+         Everything is anchored to the bottom so the pet "sits" in a corner. -->
+    <div id="sn-root" class="sn-root" aria-live="polite">
+
+      <!-- Speech bubble (PRD §9.3). Shown above the pet. -->
+      <div id="sn-bubble" class="sn-bubble" role="status" hidden>
+        <span class="sn-bubble__text"></span>
+        <span class="sn-bubble__tail"></span>
+      </div>
+
+      <!-- Task detail panel (PRD §9.6). Slides up from the pet. -->
+      <section id="sn-panel" class="sn-panel" aria-label="SuperNoNo 任务面板" hidden>
+        <header class="sn-panel__head">
+          <span class="sn-panel__title">SuperNoNo 任务面板</span>
+          <button class="sn-iconbtn sn-panel__close no-drag" data-act="close-panel" title="收起" aria-label="收起面板">×</button>
+        </header>
+        <div class="sn-panel__body">
+          <div class="sn-panel__statusrow">
+            <span class="sn-chip sn-chip--state" data-field="state-label">待机</span>
+            <span class="sn-panel__energy">
+              <span class="sn-panel__energy-track"><span class="sn-panel__energy-fill" data-field="energy-fill"></span></span>
+              <span class="sn-panel__energy-num" data-field="energy-num">20%</span>
+            </span>
+          </div>
+
+          <h4 class="sn-panel__h">当前任务</h4>
+          <p class="sn-panel__task" data-field="task-title">暂无进行中的任务</p>
+
+          <h4 class="sn-panel__h">计划</h4>
+          <ul class="sn-plan" data-field="plan"></ul>
+
+          <h4 class="sn-panel__h">最近动作</h4>
+          <ul class="sn-actions" data-field="actions"></ul>
+
+          <div class="sn-panel__attn" data-field="attn" hidden></div>
+
+          <div class="sn-panel__artifacts" data-field="artifacts" hidden>
+            <h4 class="sn-panel__h">产物</h4>
+            <ul class="sn-artifacts" data-field="artifacts-list"></ul>
+          </div>
+
+          <h4 class="sn-panel__h">下一步</h4>
+          <p class="sn-panel__next" data-field="next-step">—</p>
+        </div>
+        <footer class="sn-panel__foot">
+          <button class="sn-btn no-drag" data-act="open-artifact">打开产物</button>
+          <button class="sn-btn sn-btn--ghost no-drag" data-act="quieter">降低提示</button>
+          <button class="sn-btn sn-btn--ghost no-drag" data-act="settings">设置</button>
+        </footer>
+      </section>
+
+      <!-- Settings (PRD §9.7 / §11.4). -->
+      <section id="sn-settings" class="sn-settings" aria-label="SuperNoNo 设置" hidden>
+        <header class="sn-panel__head">
+          <span class="sn-panel__title">SuperNoNo 设置</span>
+          <button class="sn-iconbtn no-drag" data-act="close-settings" title="收起" aria-label="收起设置">×</button>
+        </header>
+        <div class="sn-settings__body">
+          <label class="sn-set-row">
+            <span class="sn-set-row__label">启用桌宠</span>
+            <input type="checkbox" class="sn-switch" data-pref="enabled" />
+          </label>
+
+          <div class="sn-set-row">
+            <span class="sn-set-row__label">名称</span>
+            <input type="text" class="sn-text" data-pref="displayName" maxlength="16" />
+          </div>
+
+          <div class="sn-set-row sn-set-row--seg">
+            <span class="sn-set-row__label">语气</span>
+            <div class="sn-seg" data-pref="tone">
+              <button data-val="professional">专业</button>
+              <button data-val="casual">轻松</button>
+              <button data-val="lively">活泼</button>
+            </div>
+          </div>
+
+          <div class="sn-set-row sn-set-row--seg">
+            <span class="sn-set-row__label">提示频率</span>
+            <div class="sn-seg" data-pref="notificationLevel">
+              <button data-val="quiet">安静</button>
+              <button data-val="standard">标准</button>
+              <button data-val="active">活跃</button>
+            </div>
+          </div>
+
+          <div class="sn-set-row sn-set-row--seg">
+            <span class="sn-set-row__label">动画强度</span>
+            <div class="sn-seg" data-pref="animationLevel">
+              <button data-val="off">关闭</button>
+              <button data-val="low">低</button>
+              <button data-val="standard">标准</button>
+            </div>
+          </div>
+
+          <div class="sn-set-row sn-set-row--seg">
+            <span class="sn-set-row__label">停靠位置</span>
+            <div class="sn-seg" data-pref="dockPosition">
+              <button data-val="bottom-left">左下</button>
+              <button data-val="bottom-right">右下</button>
+              <button data-val="sidebar-top">侧栏</button>
+            </div>
+          </div>
+
+          <div class="sn-set-row sn-set-row--seg">
+            <span class="sn-set-row__label">记忆范围</span>
+            <div class="sn-seg" data-pref="memoryScope">
+              <button data-val="none">不记忆</button>
+              <button data-val="local">本地</button>
+              <button data-val="cross-thread">跨线程</button>
+            </div>
+          </div>
+
+          <label class="sn-set-row">
+            <span class="sn-set-row__label">开场问候</span>
+            <input type="checkbox" class="sn-switch" data-pref="greetingOnStart" />
+          </label>
+
+          <label class="sn-set-row">
+            <span class="sn-set-row__label">完成庆祝</span>
+            <input type="checkbox" class="sn-switch" data-pref="celebrateOnComplete" />
+          </label>
+        </div>
+        <footer class="sn-panel__foot">
+          <button class="sn-btn sn-btn--danger no-drag" data-act="reset">重置 SuperNoNo</button>
+        </footer>
+      </section>
+
+      <!-- The pet "dock card" (PRD §11.1). Draggable in Electron. -->
+      <div id="sn-card" class="sn-card" data-state="idle">
+        <div class="sn-card__toolbar">
+          <button class="sn-iconbtn no-drag" data-act="toggle-panel" title="任务面板" aria-label="打开任务面板">▤</button>
+          <button class="sn-iconbtn no-drag" data-act="settings" title="设置" aria-label="打开设置">⚙</button>
+          <button class="sn-iconbtn no-drag" data-act="hide" title="隐藏" aria-label="隐藏桌宠">—</button>
+        </div>
+
+        <!-- Live2D NoNo renders here; the SVG below is the fallback. -->
+        <div id="sn-live2d-stage" class="sn-live2d-stage" aria-hidden="true"></div>
+
+        <!-- ============ SuperNoNo — fallback mechanical pet (SVG) ============ -->
+        <svg
+          class="sn-pet"
+          data-state="idle"
+          viewBox="0 0 200 234"
+          width="168"
+          height="196"
+          role="img"
+          aria-label="SuperNoNo 桌宠"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="snBody" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" />
+              <stop offset="0.45" stop-color="#eef2f7" />
+              <stop offset="1" stop-color="#c7ced8" />
+            </linearGradient>
+            <linearGradient id="snBodySide" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.0" />
+              <stop offset="1" stop-color="#9aa4b2" stop-opacity="0.35" />
+            </linearGradient>
+            <radialGradient id="snFace" cx="0.5" cy="0.35" r="0.8">
+              <stop offset="0" stop-color="#1b2233" />
+              <stop offset="1" stop-color="#0a0e16" />
+            </radialGradient>
+            <radialGradient id="snCore" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#ffffff" />
+              <stop offset="0.35" stop-color="currentColor" />
+              <stop offset="1" stop-color="currentColor" stop-opacity="0.15" />
+            </radialGradient>
+            <filter id="snGlow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="4" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <!-- ground shadow -->
+          <ellipse class="sn-shadow" cx="100" cy="222" rx="46" ry="8" fill="#0b1622" opacity="0.18" />
+
+          <!-- everything that floats -->
+          <g class="sn-float">
+            <!-- antenna -->
+            <g class="sn-antenna">
+              <line x1="100" y1="40" x2="100" y2="20" stroke="#aeb7c4" stroke-width="3" stroke-linecap="round" />
+              <circle class="sn-antenna-tip" cx="100" cy="16" r="5" fill="currentColor" filter="url(#snGlow)" />
+            </g>
+
+            <!-- side module mounts -->
+            <g class="sn-mount sn-mount--l">
+              <rect x="34" y="120" width="16" height="34" rx="8" fill="#c2cad6" />
+              <rect class="sn-mount-led" x="38" y="131" width="8" height="12" rx="4" fill="currentColor" />
+            </g>
+            <g class="sn-mount sn-mount--r">
+              <rect x="150" y="120" width="16" height="34" rx="8" fill="#c2cad6" />
+              <rect class="sn-mount-led" x="154" y="131" width="8" height="12" rx="4" fill="currentColor" />
+            </g>
+
+            <!-- body -->
+            <g class="sn-body">
+              <rect x="52" y="42" width="96" height="140" rx="48" fill="url(#snBody)" stroke="#b9c2cf" stroke-width="2" />
+              <rect x="52" y="42" width="96" height="140" rx="48" fill="url(#snBodySide)" />
+              <!-- top gloss -->
+              <ellipse cx="86" cy="70" rx="22" ry="12" fill="#ffffff" opacity="0.55" />
+            </g>
+
+            <!-- face screen -->
+            <g class="sn-faceplate">
+              <rect x="64" y="64" width="72" height="52" rx="20" fill="url(#snFace)" stroke="#2b3242" stroke-width="2" />
+              <!-- scanning beam (state-gated) -->
+              <rect class="sn-beam" x="66" y="86" width="68" height="6" rx="3" fill="currentColor" opacity="0" />
+              <!-- eyes -->
+              <g class="sn-eyes" fill="currentColor">
+                <rect class="sn-eye sn-eye--l" x="82" y="80" width="11" height="18" rx="5.5" />
+                <rect class="sn-eye sn-eye--r" x="107" y="80" width="11" height="18" rx="5.5" />
+              </g>
+              <!-- waiting "!" badge -->
+              <g class="sn-bang" opacity="0">
+                <circle cx="128" cy="60" r="13" fill="var(--sn-c-yellow)" />
+                <rect x="125.5" y="52" width="5" height="11" rx="2.5" fill="#1b1500" />
+                <circle cx="128" cy="67.5" r="2.6" fill="#1b1500" />
+              </g>
+            </g>
+
+            <!-- energy core (PRD §7.2) -->
+            <g class="sn-coreGroup" filter="url(#snGlow)">
+              <circle class="sn-radar" cx="100" cy="150" r="16" fill="none" stroke="currentColor" stroke-width="2" opacity="0" />
+              <circle class="sn-core" cx="100" cy="150" r="17" fill="url(#snCore)" />
+              <circle class="sn-core-ring" cx="100" cy="150" r="17" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.5" />
+            </g>
+
+            <!-- building sparks (state-gated) -->
+            <g class="sn-sparks" opacity="0">
+              <circle cx="150" cy="158" r="2.5" fill="var(--sn-c-yellow)" />
+              <circle cx="158" cy="150" r="2" fill="#fff" />
+              <circle cx="156" cy="166" r="1.6" fill="var(--sn-c-yellow)" />
+            </g>
+          </g>
+        </svg>
+        <!-- ===================== /SuperNoNo SVG ===================== -->
+
+        <div class="sn-card__status">
+          <span class="sn-card__dotstate" aria-hidden="true"></span>
+          <span class="sn-card__statelabel" data-field="card-state">待机</span>
+        </div>
+      </div>
+
+      <!-- Minimized entry point (PRD §9.1) -->
+      <button id="sn-dot" class="sn-dot no-drag" title="显示 SuperNoNo" aria-label="显示 SuperNoNo" hidden>
+        <span class="sn-dot__core"></span>
+      </button>
+
+      <!-- Developer / demo control strip (toggle with the ` key or ?dev) -->
+      <div id="sn-devbar" class="sn-devbar" hidden>
+        <strong>演示</strong>
+        <button data-demo="run">▶ 长任务流程</button>
+        <button data-sim="thinking">思考</button>
+        <button data-sim="scanning">扫描</button>
+        <button data-sim="building">施工</button>
+        <button data-sim="validating">验证</button>
+        <button data-sim="waiting_approval">等待授权</button>
+        <button data-sim="blocked">阻塞</button>
+        <button data-sim="completed">完成</button>
+        <button data-sim="idle">待机</button>
+      </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/prefs.js"></script>
+    <script src="js/signalAdapter.js"></script>
+    <script src="js/stateEngine.js"></script>
+    <script src="js/pet.js"></script>
+    <script src="js/bubble.js"></script>
+    <script src="js/panel.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/simulator.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Live2D runtime: Cubism core (global) then the bundled NoNo player -->
+    <script src="assets/live2d/vendor/live2dcubismcore.min.js"></script>
+    <script src="assets/live2d/live2d.bundle.js"></script>
+  </body>
+</html>

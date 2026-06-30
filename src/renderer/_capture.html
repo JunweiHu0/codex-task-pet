@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>NoNo icon capture</title>
+    <style>
+      html, body { margin: 0; background: transparent; }
+      #sn-live2d-stage { width: 360px; height: 400px; }
+      #sn-live2d-stage #sn-live2d-canvas { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="sn-live2d-stage"></div>
+    <script>window.SN_CAPTURE = true;</script>
+    <script src="assets/live2d/vendor/live2dcubismcore.min.js"></script>
+    <script src="assets/live2d/live2d.bundle.js"></script>
+    <script>
+      // Crop the model's transparent canvas to its content bbox, center it in a
+      // padded square, and emit PNG data URLs at the requested sizes.
+      function captureIcon() {
+        const src = document.querySelector('#sn-live2d-canvas');
+        if (!src) return null;
+        const w = src.width, h = src.height;
+        const tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        const tctx = tmp.getContext('2d');
+        tctx.drawImage(src, 0, 0);
+        const data = tctx.getImageData(0, 0, w, h).data;
+
+        let minX = w, minY = h, maxX = 0, maxY = 0, found = false;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > 18) {
+              found = true;
+              if (x < minX) minX = x; if (x > maxX) maxX = x;
+              if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+          }
+        }
+        if (!found) return null;
+        const bw = maxX - minX + 1, bh = maxY - minY + 1;
+        const side = Math.max(bw, bh);
+        const pad = Math.round(side * 0.12);
+        const full = side + pad * 2;
+
+        function render(size) {
+          const c = document.createElement('canvas');
+          c.width = size; c.height = size;
+          const cx = c.getContext('2d');
+          cx.imageSmoothingEnabled = true;
+          cx.imageSmoothingQuality = 'high';
+          const scale = size / full;
+          const dx = (full - bw) / 2, dy = (full - bh) / 2;
+          cx.drawImage(tmp, minX, minY, bw, bh, dx * scale, dy * scale, bw * scale, bh * scale);
+          return c.toDataURL('image/png');
+        }
+        return { i512: render(512), i256: render(256), i32: render(32), bbox: [bw, bh, w, h] };
+      }
+      window.captureIcon = captureIcon;
+
+      window.snReady = false;
+      function arm() {
+        if (window.desktopPet) window.desktopPet.setState('idle');
+        setTimeout(() => { window.snReady = true; }, 1000);
+      }
+      if (window.SNLive2DReady) arm();
+      else window.addEventListener('sn-live2d-ready', arm);
+    </script>
+  </body>
+</html>

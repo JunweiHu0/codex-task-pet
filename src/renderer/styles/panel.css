@@ -1,0 +1,141 @@
+/* panel.css — task detail panel (PRD §9.6 / §11.2). */
+
+.sn-panel,
+.sn-settings {
+  -webkit-app-region: no-drag;
+  width: 290px;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border-strong);
+  border-radius: var(--sn-radius);
+  box-shadow: var(--sn-shadow);
+  overflow: hidden;
+  animation: snPanelIn 0.2s ease-out;
+}
+.sn-panel[hidden],
+.sn-settings[hidden] { display: none; }
+
+@keyframes snPanelIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+body[data-anim="off"] .sn-panel,
+body[data-anim="off"] .sn-settings { animation: none; }
+
+.sn-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sn-border);
+  background: var(--sn-surface-2);
+}
+.sn-panel__title { font-size: 13px; font-weight: 600; }
+
+.sn-panel__body {
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sn-panel__statusrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.sn-chip--state::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--sn-state-color, var(--sn-c-neutral));
+  box-shadow: 0 0 8px 1px var(--sn-state-color, var(--sn-c-neutral));
+}
+
+.sn-panel__energy { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
+.sn-panel__energy-track {
+  width: 90px; height: 7px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+}
+.sn-panel__energy-fill {
+  display: block; height: 100%; width: 20%;
+  background: var(--sn-energy-color, var(--sn-c-neutral));
+  border-radius: 999px;
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.sn-panel__energy-num { font-size: 12px; color: var(--sn-text-dim); min-width: 34px; text-align: right; }
+
+.sn-panel__h {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sn-text-dim);
+  font-weight: 600;
+}
+.sn-panel__task { margin: 0; font-size: 13px; }
+.sn-panel__next { margin: 0; font-size: 13px; color: var(--sn-text); }
+
+/* plan checklist */
+.sn-plan { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.sn-plan li {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 13px; color: var(--sn-text);
+}
+.sn-plan li::before { width: 14px; flex: none; text-align: center; }
+.sn-plan li[data-status="done"] { color: var(--sn-text-dim); }
+.sn-plan li[data-status="done"]::before  { content: "✓"; color: var(--sn-c-green); }
+.sn-plan li[data-status="active"]::before { content: "→"; color: var(--sn-c-blue); }
+.sn-plan li[data-status="todo"]::before   { content: "○"; color: var(--sn-text-dim); }
+.sn-plan li[data-status="active"] { font-weight: 600; }
+
+/* recent actions */
+.sn-actions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sn-actions li {
+  font-size: 12px; color: var(--sn-text-dim);
+  padding-left: 12px; position: relative;
+}
+.sn-actions li::before { content: "–"; position: absolute; left: 0; }
+
+/* attention banner */
+.sn-panel__attn {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  border: 1px solid var(--sn-c-yellow);
+  background: rgba(255, 197, 61, 0.10);
+  color: #ffe6a8;
+}
+.sn-panel__attn[data-kind="blocked"] {
+  border-color: var(--sn-c-red);
+  background: rgba(255, 93, 108, 0.10);
+  color: #ffc2c8;
+}
+
+/* artifacts */
+.sn-artifacts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sn-artifacts li { display: flex; align-items: center; gap: 6px; }
+.sn-artifacts a, .sn-artifacts button.sn-path {
+  -webkit-app-region: no-drag;
+  appearance: none; border: none; background: rgba(255, 255, 255, 0.06);
+  color: var(--sn-c-blue); font-size: 12px; text-decoration: none;
+  padding: 4px 8px; border-radius: 8px; cursor: pointer;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  word-break: break-all; text-align: left;
+}
+.sn-artifacts a:hover, .sn-artifacts button.sn-path:hover { background: rgba(255, 255, 255, 0.12); }
+
+.sn-panel__foot {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--sn-border);
+  background: var(--sn-surface-2);
+}
+.sn-panel__foot .sn-btn { flex: 1; }
