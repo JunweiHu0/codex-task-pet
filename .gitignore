@@ -1,5 +1,19 @@
+# dependencies
 node_modules/
+
+# Local cloned reference project — NOT part of this repo.
+# (kept locally for reference; the app does not depend on it)
+/SuperNoNo/
+
+# local tooling / editor / agent state
+.claude/
+
+# build output
 dist/
+build/
+
+# logs & OS cruft
 *.log
+npm-debug.log*
 .DS_Store
 Thumbs.db
