@@ -2,7 +2,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "shell_command",
         "hooks": [
           {
             "type": "command",
@@ -40,7 +40,6 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -54,7 +53,6 @@
     ],
     "PermissionRequest": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
