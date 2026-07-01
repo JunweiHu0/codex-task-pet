@@ -1,0 +1,19 @@
+{
+  "name": "supernono-local",
+  "interface": {
+    "displayName": "SuperNoNo (local)"
+  },
+  "plugins": [
+    {
+      "name": "supernono-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/supernono-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

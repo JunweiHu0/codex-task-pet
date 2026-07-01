@@ -2,7 +2,9 @@
 
 Hook scripts that translate **official** Codex lifecycle events into
 [SuperNoNo protocol events](../../../docs/supernono-signal-protocol.md) via the
-shared sender [`adapters/shared/send-signal.js`](../../../adapters/shared/send-signal.js).
+vendored [`send-signal.js`](send-signal.js) — a self-contained copy of
+`adapters/shared/send-signal.js`, so the plugin works from the Codex install
+cache where the repo's `adapters/` folder is not present.
 
 The hooks API is officially supported ([docs](https://developers.openai.com/codex/hooks)).
 `hooks.json` here targets that schema. The scripts still parse **defensively**
@@ -15,6 +17,7 @@ schema drift degrades gracefully instead of breaking Codex.
 | --- | --- |
 | `hooks.json` | official hooks config: `matcher` + `hooks[]` command handlers |
 | `lib.js` | official-field parsing, redaction/summaries, mappers, `metaOf`, `send()` |
+| `send-signal.js` | vendored, dependency-free POST-to-bridge sender (self-contained) |
 | `pre-tool-use.js` | `PreToolUse` → `command_running` / `file_reading` / `file_editing` |
 | `post-tool-use.js` | `PostToolUse` → `step_done` (or `error` on failure) |
 | `permission-request.js` | `PermissionRequest` → `permission_required` |
@@ -25,14 +28,18 @@ schema drift degrades gracefully instead of breaking Codex.
 ```json
 { "hooks": { "PreToolUse": [ { "matcher": "Bash",
   "hooks": [ { "type": "command",
-               "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
-               "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+               "command": "node ./hooks/pre-tool-use.js",
+               "command_windows": "node .\\hooks\\pre-tool-use.js",
                "timeout": 5, "statusMessage": "Updating SuperNoNo" } ] } ] } } }
 ```
 
 - `matcher` is a regex on `tool_name`; `"*"` / `""` / omit = catch-all.
 - `timeout` is in **seconds** (docs default 600; we use 5).
-- `${PLUGIN_ROOT}` is the plugin's installed root (env var Codex provides).
+- `command` is **relative to the plugin install root**: Codex runs each hook with
+  its working directory set to the installed plugin folder
+  (`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`). Verified on
+  codex-cli 0.142.4; matches OpenAI's shipping plugins, whose hooks use relative
+  commands like `./scripts/foo.sh`.
 
 ## Official payload fields (parsed first)
 

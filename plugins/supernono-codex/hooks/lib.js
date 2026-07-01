@@ -1,12 +1,11 @@
 'use strict';
 /*
- * lib.js — shared helpers for the SuperNoNo Codex hooks PROTOTYPE.
+ * lib.js — helpers for the SuperNoNo Codex plugin hooks.
  *
- * PROTOTYPE STATUS: the real Codex hook payload shape is UNVERIFIED on this
- * machine's Codex version. No installed plugin declares `hooks`, and no
- * `hooks.json` schema is documented here — so everything below parses
- * DEFENSIVELY and degrades to a no-op rather than guessing wrongly.
- * See ../README.md ("confirmed / unconfirmed").
+ * The Codex plugin-hooks API and payload shape are official (see ../README.md).
+ * Even so, everything below parses DEFENSIVELY (official fields first, fallbacks
+ * kept) and degrades to a no-op rather than guessing, so any schema drift can
+ * never break Codex.
  *
  * Guarantees:
  *   - never throws into the caller's process on bad input;
@@ -15,7 +14,10 @@
  *   - never records prompt / source / full tool input / token / secret.
  */
 const fs = require('fs');
-const { sendSignal } = require('../../../adapters/shared/send-signal');
+// Vendored, self-contained sender (see ./send-signal.js). Must stay inside the
+// plugin dir: Codex runs hooks from the install cache, where the repo's
+// adapters/shared/ is not present.
+const { sendSignal } = require('./send-signal');
 
 const AGENT = 'codex';
 const ADAPTER = 'codex-plugin-hooks';

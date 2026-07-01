@@ -5,20 +5,20 @@ permission requests) to the local SuperNoNo desktop pet — richer than the
 `turn_ended` signal we get from the `notify` wrapper. It uses **official Codex
 plugin hooks**.
 
-> **Status:** this is an **installable candidate**. The Codex plugin-hooks API is
-> **officially supported** (see [Codex hooks](https://developers.openai.com/codex/hooks)
-> and [Build a plugin](https://developers.openai.com/codex/plugins/build)), and
-> this plugin is written to that schema. **What is not yet verified is the local
-> install + trust on this machine** — you install and trust it (see
-> [INSTALL.md](INSTALL.md)). Nothing here modifies `~/.codex/config.toml`, and the
-> `notify` wrapper stays as the turn-level fallback.
+> **Status:** **installed + enabled** on this machine (codex-cli 0.142.4) via the
+> official `codex plugin` CLI — marketplace, manifest, and `hooks.json` schema are
+> all verified against real Codex. **The one remaining step is hook *trust*:**
+> Codex skips a plugin's hooks until you approve them, so the hooks don't fire yet
+> (see [INSTALL.md](INSTALL.md)). Installing wrote two sections to
+> `~/.codex/config.toml`; the `notify` wrapper is independent and still provides
+> the turn-level fallback.
 
 ## Where this fits
 
 ```text
 Codex plugin hooks (PreToolUse / PostToolUse / PermissionRequest)   <- fine-grained (this plugin)
         \
-         >-- adapters/shared/send-signal.js -- POST 127.0.0.1:4174/signal -- SuperNoNo pet
+         >-- hooks/send-signal.js (vendored) -- POST 127.0.0.1:4174/signal -- SuperNoNo pet
         /
 Codex notify wrapper (turn-ended)                                   <- turn-level fallback (independent)
 ```
@@ -33,29 +33,33 @@ Codex notify wrapper (turn-ended)                                   <- turn-leve
 
 ## Confirmed vs. not-yet-verified
 
-**✅ Confirmed (official docs)**
+**✅ Confirmed (verified on this machine, codex-cli 0.142.4)**
 
-- Codex plugin **hooks are officially supported**: events `PreToolUse`,
-  `PostToolUse`, `PermissionRequest` (and more), configured in `hooks/hooks.json`
-  with `matcher` + `hooks[]` (`type: "command"`, `command`/`command_windows`,
-  `timeout` in **seconds**, `statusMessage`).
+- Codex plugin **hooks are supported**: events `PreToolUse`, `PostToolUse`,
+  `PermissionRequest` (and more), configured in `hooks/hooks.json` with `matcher`
+  + `hooks[]` (`type: "command"`, `command`/`command_windows`, `timeout` in
+  **seconds**, `statusMessage`).
 - The plugin **manifest** `.codex-plugin/plugin.json` (required `name` / `version`
-  / `description`), verified against OpenAI's own bundled plugins.
-- `hooks/hooks.json` is **auto-discovered**, so no `hooks` field is needed in
-  `plugin.json` (we omit it).
+  / `description`); `hooks/hooks.json` is **auto-discovered**, so no `hooks` field
+  is needed in `plugin.json` (we omit it).
+- **`marketplace.json` schema**: nested `source: { source: "local", path }` + a
+  `policy` block (verified against OpenAI's bundled marketplaces and by installing).
+- **Install** via `codex plugin marketplace add` + `codex plugin add` →
+  `installed: true, enabled: true`; adds exactly two sections to
+  `~/.codex/config.toml`.
 - Hook input fields: `tool_name`, `tool_use_id`, `tool_input`, `turn_id`,
   `session_id`; `tool_response` on PostToolUse.
-- Hooks receive the `PLUGIN_ROOT` env var (referenced from `hooks.json`).
+- Hook `command` is **relative to the plugin install root** (Codex sets the hook's
+  working directory to the installed plugin folder) — no `${PLUGIN_ROOT}` needed.
 
-**❓ Not yet verified on this machine**
+**❓ Not yet verified**
 
-- Local **install + trust**: this plugin has not been registered/trusted in your
-  Codex yet (see [INSTALL.md](INSTALL.md)). Codex will ask you to review/trust the
-  hooks before they run.
-- Whether `node` is on Codex's hook-exec PATH, and whether `${PLUGIN_ROOT}` is
-  expanded as a placeholder vs. a shell env var on Windows (`command_windows`).
-- The exact `marketplace.json` schema for local install (verify against your
-  Codex version).
+- Hook **trust**: hooks are installed + enabled, but Codex won't run them until
+  they are **trusted** — a non-interactive `codex exec` confirmed untrusted hooks
+  are silently skipped (only the `notify` wrapper's `turn_ended` arrived). Approve
+  the trust prompt (Desktop / TUI) to make them fire (see [INSTALL.md](INSTALL.md)).
+- Whether `node` is on Codex's hook-exec PATH (only observable once the hooks are
+  trusted and actually run).
 
 ## Event mapping
 
@@ -85,8 +89,9 @@ full control of approvals.
 - Hooks **never execute** payload commands and **never** print a decision to
   stdout (so Codex behaviour is unaffected); they exit 0.
 - If SuperNoNo isn't running, sends fail silently — Codex is never blocked.
-- **No npm dependencies**; reuses
-  [`adapters/shared/send-signal.js`](../../adapters/shared/send-signal.js).
+- **No npm dependencies**; ships a vendored, self-contained
+  [`hooks/send-signal.js`](hooks/send-signal.js) (kept in sync with
+  `adapters/shared/send-signal.js`) so the plugin works from the install cache.
 
 ## Files
 
@@ -96,6 +101,7 @@ plugins/supernono-codex/
 ├── hooks/
 │   ├── hooks.json                 # official hooks config (matchers + command handlers)
 │   ├── lib.js                     # official-field parsing + mapping + send()
+│   ├── send-signal.js             # vendored, dependency-free bridge sender
 │   ├── pre-tool-use.js            # PreToolUse  -> command_running / file_reading / file_editing
 │   ├── post-tool-use.js           # PostToolUse -> step_done / error
 │   ├── permission-request.js      # PermissionRequest -> permission_required
@@ -122,7 +128,8 @@ every line `MISS`, exit 0.
 
 - Different payload keys → adjust `toolNameOf` / `commandOf` / `pathOf` / `metaOf`
   in `hooks/lib.js` (official fields are already first).
-- `${PLUGIN_ROOT}` not expanded on Windows → change `command_windows` in
-  `hooks.json` to `%PLUGIN_ROOT%`.
+- Hook script not found (wrong cwd) → `command` is relative to the plugin install
+  root; switch to an absolute path in `hooks.json` if your Codex runs hooks from a
+  different working directory.
 - `node` not on Codex's hook PATH → use an absolute node path in `hooks.json`.
 - No usable per-tool hooks → the `notify` wrapper still provides turn-level state.

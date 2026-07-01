@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
-            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "command": "node ./hooks/pre-tool-use.js",
+            "command_windows": "node .\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -18,8 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
-            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "command": "node ./hooks/pre-tool-use.js",
+            "command_windows": "node .\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -30,8 +30,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
-            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "command": "node ./hooks/pre-tool-use.js",
+            "command_windows": "node .\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -44,8 +44,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/post-tool-use.js",
-            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\post-tool-use.js",
+            "command": "node ./hooks/post-tool-use.js",
+            "command_windows": "node .\\hooks\\post-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -58,8 +58,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${PLUGIN_ROOT}/hooks/permission-request.js",
-            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\permission-request.js",
+            "command": "node ./hooks/permission-request.js",
+            "command_windows": "node .\\hooks\\permission-request.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
