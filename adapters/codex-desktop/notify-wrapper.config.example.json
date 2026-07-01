@@ -1,0 +1,9 @@
+{
+  "originalNotify": [
+    "C:\\Path\\To\\Original\\codex-computer-use.exe",
+    "turn-ended"
+  ],
+  "forwardType": "completed",
+  "installedAt": "2026-01-01T00:00:00.000Z",
+  "backup": "C:\\Users\\you\\.codex\\config.toml.supernono-backup-example"
+}

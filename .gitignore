@@ -7,6 +7,11 @@ node_modules/
 
 # local tooling / editor / agent state
 .claude/
+.obsidian/
+
+# local Codex adapter runtime state
+adapters/codex-desktop/notify-wrapper.config.json
+adapters/codex-desktop/notify-observed.json
 
 # build output
 dist/

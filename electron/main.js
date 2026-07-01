@@ -16,6 +16,11 @@ const WIN_W = 340;
 const WIN_H = 660;
 const MARGIN = 12;
 
+// Local event bridge (Milestone 1): loopback-only HTTP seam for agent adapters.
+const BRIDGE_PORT = Number(process.env.SUPERNONO_BRIDGE_PORT || 4174);
+const BRIDGE_PROTOCOL_VERSION = '0.1.0';
+const BRIDGE_MAX_BODY = 64 * 1024; // reject /signal bodies larger than 64KB
+
 let win = null;
 let tray = null;
 let currentDock = 'bottom-right';
@@ -57,6 +62,90 @@ function startServer() {
       serverUrl = `http://127.0.0.1:${port}/`;
       resolve(serverUrl);
     });
+  });
+}
+
+/*
+ * Local event bridge (Milestone 1). A loopback-only HTTP endpoint that lets any
+ * local agent adapter (Codex, Claude, scripts, ...) drive the pet by POSTing
+ * normalized state events:
+ *
+ *   GET  /health  -> { ok, app, protocolVersion }
+ *   POST /signal  -> forwards to the renderer via IPC ('sn:signal')
+ *
+ * Security: binds 127.0.0.1 only, caps the body size, and NEVER executes
+ * anything from the payload — it only relays state to the existing renderer
+ * channel. If SuperNoNo isn't running the sender simply fails to connect.
+ */
+function startBridgeServer() {
+  const json = (res, code, obj) => {
+    res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify(obj));
+  };
+
+  const server = http.createServer((req, res) => {
+    if (req.method === 'GET' && req.url === '/health') {
+      return json(res, 200, { ok: true, app: 'SuperNoNo', protocolVersion: BRIDGE_PROTOCOL_VERSION });
+    }
+
+    if (req.method !== 'POST' || req.url !== '/signal') {
+      return json(res, 404, { ok: false, error: 'not found' });
+    }
+
+    let body = '';
+    let aborted = false;
+    req.on('data', (chunk) => {
+      if (aborted) return;
+      body += chunk;
+      if (body.length > BRIDGE_MAX_BODY) {
+        aborted = true;
+        json(res, 413, { ok: false, error: 'payload too large' });
+        req.destroy();
+      }
+    });
+
+    req.on('end', () => {
+      if (aborted) return;
+
+      let msg;
+      try {
+        msg = JSON.parse(body || '{}');
+      } catch (_) {
+        return json(res, 400, { ok: false, error: 'invalid json' });
+      }
+
+      const type = typeof msg.type === 'string' ? msg.type.trim() : '';
+      if (!type) return json(res, 400, { ok: false, error: 'missing type' });
+
+      // Relay only the state payload + provenance. Commands are data, never run.
+      // Envelope fields (agent/adapter/sessionId/taskId) may arrive either at the
+      // top level or inside payload; accept both, top level winning.
+      const rawPayload = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};
+      const pickStr = (a, b) => (typeof a === 'string' && a ? a : (typeof b === 'string' && b ? b : null));
+      const agent = pickStr(msg.agent, rawPayload.agent);
+      const adapter = pickStr(msg.adapter, rawPayload.adapter);
+      const sessionId = pickStr(msg.sessionId, rawPayload.sessionId);
+      const taskId = pickStr(msg.taskId, rawPayload.taskId);
+      const normalizedPayload = {
+        ...rawPayload,
+        agent,
+        adapter,
+        sessionId,
+        taskId,
+        source: rawPayload.source || adapter || agent || 'local-bridge',
+      };
+
+      if (win && !win.isDestroyed()) win.webContents.send('sn:signal', type, normalizedPayload);
+      return json(res, 200, { ok: true });
+    });
+
+    req.on('error', () => { try { res.destroy(); } catch (_) { /* ignore */ } });
+  });
+
+  // A bind failure (e.g. port already in use) must not break the pet itself.
+  server.on('error', (err) => console.log('[SuperNoNo] bridge disabled:', err && err.message));
+  server.listen(BRIDGE_PORT, '127.0.0.1', () => {
+    console.log(`[SuperNoNo] bridge listening: http://127.0.0.1:${BRIDGE_PORT}`);
   });
 }
 
@@ -178,6 +267,7 @@ if (!gotLock) {
   app.whenReady().then(async () => {
     await startServer();
     createWindow();
+    startBridgeServer();
     buildTray();
     globalShortcut.register('CommandOrControl+Shift+N', toggleVisible);
 

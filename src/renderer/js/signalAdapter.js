@@ -12,9 +12,9 @@
  *   SN.signals.onChange(fn)
  *
  * Recognised signalTypes mirror the §15.2 pseudocode:
- *   task_start, plan_ready, file_reading, file_editing, test_running,
- *   step_done, permission_required, permission_resolved, error, blocked,
- *   completed, idle
+ *   task_start, plan_ready, file_reading, file_editing, command_running,
+ *   test_running, step_done, permission_required, permission_resolved, error,
+ *   blocked, completed, idle
  */
 (function (global) {
   'use strict';
@@ -128,6 +128,16 @@
           this._flags.completed = false;
           ctx.nextStep = payload.nextStep || '等待测试结果';
           this._pushAction(payload.action || '正在运行验证');
+          this._advancePlan(payload.planAdvance);
+          break;
+
+        case 'command_running':
+          // Generic shell/command execution (agent-neutral). First-version
+          // mapping: tests -> validating phase, everything else -> building phase.
+          this._phase = payload.isTest === true ? 'test_running' : 'file_editing';
+          this._flags.completed = false;
+          ctx.nextStep = payload.nextStep || ctx.nextStep;
+          this._pushAction(payload.action || (payload.command ? ('正在运行命令：' + payload.command) : '正在运行命令'));
           this._advancePlan(payload.planAdvance);
           break;
 
