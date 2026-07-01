@@ -1,0 +1,15 @@
+{
+  "name": "supernono-codex",
+  "version": "0.1.0-prototype",
+  "description": "SuperNoNo Codex hooks PROTOTYPE. Explores forwarding fine-grained Codex lifecycle events (tool use, permission requests) to the local SuperNoNo desktop pet via its unified signal protocol (POST 127.0.0.1:4174/signal). PROTOTYPE: the hooks manifest format is UNVERIFIED on this Codex version — see README.md.",
+  "author": { "name": "SuperNoNo" },
+  "license": "MIT",
+  "keywords": ["supernono", "desktop-pet", "codex", "adapter", "prototype"],
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "SuperNoNo",
+    "shortDescription": "Drive the SuperNoNo desktop pet from Codex lifecycle events (prototype)",
+    "developerName": "SuperNoNo",
+    "category": "Engineering"
+  }
+}
