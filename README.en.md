@@ -98,20 +98,6 @@ SuperNoNo.signal('completed', {
 });
 ```
 
-## Assets and Copyright
-
-The open-source version should only include assets that you own or are clearly allowed to redistribute.
-
-If you use cloned projects, third-party images, Live2D models, textures, motions, or game-IP-related assets locally, do not upload them to GitHub unless their license explicitly allows redistribution.
-
-Important notes:
-
-- Excluding `C:\Users\66460\Desktop\SuperNoNo\SuperNoNo` from the public repository is necessary.
-- If assets from that folder were copied into other project folders, those copied files must also be removed or excluded before publishing.
-- The README should not describe third-party assets as original work.
-- The public version should use original SVG assets, programmatically generated icons, or a newly designed original mascot.
-
-This is product and open-source publishing guidance, not legal advice. If the project will be widely distributed, monetized, or maintained long term, run a copyright and trademark review first.
 
 ## Privacy Principles
 
@@ -128,9 +114,3 @@ This is product and open-source publishing guidance, not legal advice. If the pr
 - Replace all public visuals with fully original assets.
 - Add multilingual UI strings.
 - Publish installable builds.
-
-## License
-
-MIT License is recommended for the code.
-
-Note: the MIT License only applies to code and original assets that you have the right to open source. It does not automatically license third-party assets, game IP, Live2D models, or external project resources.
