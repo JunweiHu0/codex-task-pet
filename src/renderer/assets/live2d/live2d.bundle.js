@@ -63757,13 +63757,25 @@ ${e2}`);
     fitModel();
     app.ticker.add(updateFrame, void 0, UPDATE_PRIORITY.NORMAL);
     window.addEventListener("resize", fitModel);
+    if (typeof ResizeObserver !== "undefined") {
+      const stageObserver = new ResizeObserver(() => {
+        if (app && model) {
+          app.resize();
+          fitModel();
+        }
+      });
+      stageObserver.observe(stageElement);
+    }
     stageElement.addEventListener("pointerup", () => {
       lastInteractionAt = Date.now();
       if (!CHARGING_STATES.has(currentState)) playMotion(Math.random() < 0.5 ? "Happy" : "JoyJump");
     });
     enterIdle();
     setInterval(playAutoIdle, AUTO_IDLE_CHECK_MS);
-    window.desktopPet = { setState, setCodexStatus, playMotion: (g2) => playMotion(g2), fit: fitModel };
+    window.desktopPet = { setState, setCodexStatus, playMotion: (g2) => playMotion(g2), fit: () => {
+      if (app) app.resize();
+      fitModel();
+    } };
     window.SNLive2DReady = true;
     window.dispatchEvent(new Event("sn-live2d-ready"));
   }

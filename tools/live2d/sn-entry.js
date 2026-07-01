@@ -212,6 +212,16 @@ async function start() {
   app.ticker.add(updateFrame, undefined, UPDATE_PRIORITY.NORMAL);
   window.addEventListener('resize', fitModel);
 
+  // The stage starts as display:none and only becomes visible once pet.js adds
+  // `sn-live2d-on` (after the ready event below). Re-measure + refit whenever the
+  // stage actually gets a box, so the model isn't stuck at the 0x0 init size.
+  if (typeof ResizeObserver !== 'undefined') {
+    const stageObserver = new ResizeObserver(() => {
+      if (app && model) { app.resize(); fitModel(); }
+    });
+    stageObserver.observe(stageElement);
+  }
+
   // tap the pet -> a happy little motion
   stageElement.addEventListener('pointerup', () => {
     lastInteractionAt = Date.now();
@@ -221,7 +231,7 @@ async function start() {
   enterIdle();
   setInterval(playAutoIdle, AUTO_IDLE_CHECK_MS);
 
-  window.desktopPet = { setState, setCodexStatus, playMotion: (g) => playMotion(g), fit: fitModel };
+  window.desktopPet = { setState, setCodexStatus, playMotion: (g) => playMotion(g), fit: () => { if (app) app.resize(); fitModel(); } };
   window.SNLive2DReady = true;
   window.dispatchEvent(new Event('sn-live2d-ready'));
 }
