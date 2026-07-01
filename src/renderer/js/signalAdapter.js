@@ -14,7 +14,7 @@
  * Recognised signalTypes mirror the §15.2 pseudocode:
  *   task_start, plan_ready, file_reading, file_editing, command_running,
  *   test_running, step_done, permission_required, permission_resolved, error,
- *   blocked, completed, idle
+ *   blocked, completed, turn_ended, idle
  */
 (function (global) {
   'use strict';
@@ -189,6 +189,23 @@
         case 'idle':
           this._resetFlags();
           this._phase = null;
+          break;
+
+        case 'turn_ended':
+          // Coarse Codex-notify signal: one agent turn finished. Stay calm —
+          // only celebrate when the payload explicitly reports a completed
+          // outcome; otherwise just note it and settle back to idle.
+          this._resetFlags();
+          this._phase = null;
+          ctx.requiresUserAction = false;
+          if (payload.outcome === 'completed') {
+            this._flags.completed = true;
+            ctx.plan = ctx.plan.map((p) => ({ ...p, status: 'done' }));
+            ctx.nextStep = payload.nextStep || '可以查看产物或开始下一个任务';
+            this._pushAction(payload.action || '任务已完成');
+          } else {
+            this._pushAction(payload.action || 'Codex 完成一个回合');
+          }
           break;
 
         default:

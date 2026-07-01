@@ -43,14 +43,30 @@ function findJsonPayload(args) {
   return null;
 }
 
-// Describe payload SHAPE only: key -> type/length. Never the values.
-function describeShape(payload) {
+// Keys whose VALUES must never be described (redacted regardless of type).
+const SENSITIVE_KEY = /(token|api[_-]?key|authorization|auth|secret|password|passwd|pwd|credential|cookie|private[_-]?key|access[_-]?key)/i;
+const MAX_SHAPE_DEPTH = 2;
+
+// Describe a value's SHAPE only — never its content:
+//   string -> "string(len=N)"   array -> "array[N]"   object -> recurse (depth<=2)
+//   number/boolean -> type name only.
+function describeValue(v, depth) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array[' + v.length + ']';
+  const t = typeof v;
+  if (t === 'string') return 'string(len=' + v.length + ')';
+  if (t === 'object') return depth < MAX_SHAPE_DEPTH ? describeShape(v, depth + 1) : 'object(depth-limited)';
+  return t; // number, boolean, function, ... — type only, never the value
+}
+
+// Recursively describe an object's keys -> value shapes. Redacts sensitive keys.
+function describeShape(obj, depth) {
+  depth = depth || 1;
   const shape = {};
-  if (!payload || typeof payload !== 'object') return shape;
-  for (const [k, v] of Object.entries(payload)) {
-    if (Array.isArray(v)) shape[k] = 'array[' + v.length + ']';
-    else if (v === null) shape[k] = 'null';
-    else shape[k] = typeof v;
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return shape;
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_KEY.test(k)) { shape[k] = '[redacted-key]'; continue; }
+    shape[k] = describeValue(v, depth);
   }
   return shape;
 }
@@ -68,6 +84,11 @@ function recordStructure(args, payload) {
       payloadShape: describeShape(payload), // keys + types only — NO values
     }, null, 2));
   } catch (_) { /* logging must never break the wrapper */ }
+}
+
+// Accepted coarse forward types. Anything else falls back to the quiet default.
+function normalizeForwardType(v) {
+  return (typeof v === 'string' && ['completed', 'idle', 'turn_ended'].includes(v)) ? v : 'turn_ended';
 }
 
 async function main() {
@@ -94,14 +115,15 @@ async function main() {
   const payload = findJsonPayload(passthrough);
   recordStructure(passthrough, payload);
 
-  const forwardType = (cfg.forwardType && typeof cfg.forwardType === 'string') ? cfg.forwardType : 'completed';
+  const forwardType = normalizeForwardType(cfg.forwardType);
+  const outPayload = { action: 'Codex 完成一个回合', source: 'codex-notify' };
+  // Forward-compatible: relay ONLY a short, non-sensitive outcome slug if Codex
+  // ever provides one. Never relay message text / prompts / code.
+  if (payload && typeof payload.outcome === 'string' && SAFE_SLUG.test(payload.outcome)) {
+    outPayload.outcome = payload.outcome;
+  }
   try {
-    const res = await sendSignal({
-      type: forwardType,
-      agent: 'codex',
-      adapter: 'codex-desktop-notify',
-      payload: { action: 'Codex 完成一个回合', source: 'codex-notify' },
-    });
+    const res = await sendSignal({ type: forwardType, agent: 'codex', adapter: 'codex-desktop-notify', payload: outPayload });
     if (DRY) console.log('[dry-run] forwarded', forwardType, '->', JSON.stringify(res));
   } catch (_) { /* pet not running -> ignore */ }
 }

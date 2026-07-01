@@ -125,7 +125,10 @@
       energy = Math.min(cap, energy + delta);
     }
 
-    const state = pickState(liveTypes) || (signalType === 'idle' ? 'idle' : previous.state);
+    // 'idle' and the coarse 'turn_ended' both settle the pet back to idle when
+    // nothing else is live (turn_ended only celebrates via the 'completed' flag).
+    const settle = signalType === 'idle' || signalType === 'turn_ended';
+    const state = pickState(liveTypes) || (settle ? 'idle' : previous.state);
     return withMeta(previous, state, energy, {});
   }
 

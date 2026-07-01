@@ -54,10 +54,16 @@ const backup = CONFIG + '.supernono-backup-' + stamp;
 fs.copyFileSync(CONFIG, backup);
 if (!fs.existsSync(backup)) fail('backup failed; aborting before any modification.');
 
-// 2) Persist the original notify so the wrapper can re-invoke it.
+// 2) Persist the original notify so the wrapper can re-invoke it. Preserve an
+//    existing forwardType choice on reinstall; default to the quiet 'turn_ended'.
+let forwardType = 'turn_ended'; // 'completed' | 'idle' | 'turn_ended'
+try {
+  const prev = JSON.parse(fs.readFileSync(WRAPPER_CFG, 'utf8'));
+  if (prev && ['completed', 'idle', 'turn_ended'].includes(prev.forwardType)) forwardType = prev.forwardType;
+} catch (_) { /* no previous config -> use default */ }
 fs.writeFileSync(WRAPPER_CFG, JSON.stringify({
   originalNotify,             // [ originalProgram, ...fixedArgs ]
-  forwardType: 'completed',   // coarse turn-ended -> pet state (change to 'idle' if preferred)
+  forwardType,               // coarse turn-ended -> pet event ('turn_ended' | 'idle' | 'completed')
   installedAt: new Date().toISOString(),
   backup,
 }, null, 2));

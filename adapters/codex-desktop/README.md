@@ -111,12 +111,16 @@ Codex turn ends
              1. re-invokes the ORIGINAL notify program with identical args
                 (Codex's computer-use "turn-ended" keeps working, unchanged)
              2. records the arg STRUCTURE to notify-observed.json (keys+types only)
-             3. POST /signal  ->  SuperNoNo pet shows `completed`
+             3. POST /signal (type: turn_ended)  ->  pet quietly settles to idle
 ```
 
-- **Mapping:** `turn-ended` → `completed` (the pet celebrates, then the state
-  engine auto-decays to idle). Change `forwardType` in
-  `notify-wrapper.config.json` to `idle` if you prefer a quieter signal.
+- **Mapping (default, since M3.2):** the default `forwardType` is `turn_ended`, so
+  a Codex `turn-ended` forwards the coarse **`turn_ended`** event and the pet
+  **quietly returns to idle** — no per-turn celebration. It only enters
+  `completed` when the payload carries `outcome === "completed"`. You can still
+  make every turn celebrate by explicitly setting `forwardType` to `"completed"`
+  in `notify-wrapper.config.json` (`"idle"` is also available for the barest
+  signal). See “M3.2” below for the full `forwardType` table.
 - **Never breaks Codex:** the wrapper never throws, spawns the original detached
   so it can't block, and forwards to SuperNoNo best-effort (silent if the pet is
   off).
@@ -154,6 +158,71 @@ line; everything else in config.toml is left byte-for-byte identical.
 > `notify`, re-run the installer (or roll back). The wrapper degrades safely: a
 > failed wrapper just means that turn's notify is skipped, and rollback restores
 > Codex's original notifier.
+
+## M3.2 — notify payload analysis + coarse UX
+
+Verified against a **real** Codex Desktop turn (captured in `notify-observed.json`,
+structure only). The `agent-turn-complete` notification looks like:
+
+```
+type, thread-id, turn-id, cwd, client, input-messages[N], last-assistant-message
+```
+
+**What Codex `notify` can reliably tell us**
+
+- ✅ that **one agent turn just ended** (this is the whole signal);
+- ✅ stable **`thread-id` / `turn-id`** (opaque IDs, non-sensitive);
+- ✅ **`cwd` / `client`** exist (working dir + client name).
+
+**What it CANNOT tell us**
+
+- ❌ file reads / searches, file edits / patches, command or test runs — there is
+  **no per-tool information** in the turn notification. `input-messages` and
+  `last-assistant-message` are message **content**, which we deliberately do
+  **not** read or store.
+
+**Conclusion: this is a turn-level (coarse) integration, not a fine-grained one.**
+We only know "a turn ended", so we do not fabricate `file_reading` /
+`file_editing` / `command_running` events.
+
+### Privacy of the structure log
+
+`notify-observed.json` now records shape only, with hardening:
+
+- arrays → length (`array[25]`); strings → **length only** (`string(len=42)`),
+  never the text; nested objects → recursed to **depth ≤ 2**; sensitive keys
+  (`token`, `apiKey`, `authorization`, `secret`, `password`, …) → `"[redacted-key]"`.
+- message bodies (`input-messages`, `last-assistant-message`), prompts, code and
+  tokens are **never** recorded.
+
+### Coarse UX: `forwardType`
+
+To stop the pet celebrating every single turn, the forwarded event is
+configurable in `notify-wrapper.config.json`:
+
+| `forwardType` | pet behaviour on turn-ended |
+| --- | --- |
+| `turn_ended` (**default now**) | quiet: logs "Codex 完成一个回合" and settles to **idle**; only celebrates if `payload.outcome === "completed"` |
+| `idle` | pet just returns to idle |
+| `completed` | pet celebrates each turn (the old, noisy behaviour — opt-in) |
+
+`turn_ended` is a coarse protocol event (see
+[the protocol doc](../../docs/supernono-signal-protocol.md#turn_ended)); the
+renderer maps it to idle-or-completed, so it never becomes an "unknown" event.
+The default was changed from `completed` → `turn_ended`; a `forwardType` you set
+yourself is preserved on reinstall.
+
+### If you later want fine-grained events
+
+Per-tool activity would require exploring one of these (all still unconfirmed):
+
+- **Codex plugin lifecycle** — the `[plugins.*]` / marketplace system in
+  `~/.codex`, if it exposes a per-tool hook API.
+- **MCP server side-channel** — a SuperNoNo MCP server would at least see when
+  *its own* tools are invoked.
+- **`logs_2.sqlite` read-only tail** — the desktop app's internal event log; an
+  unofficial, schema-fragile source (read-only only).
+- **Other official hooks** — a future per-tool `notify` event type, if Codex adds one.
 
 ## How to run
 

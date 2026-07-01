@@ -293,6 +293,33 @@ Codex / Claude Code / Cursor / generic-cli / custom agent
 }
 ```
 
+### turn_ended — 一个回合结束（粗粒度）→ 默认安静回到待机
+
+**这是一个 turn-level 粗粒度事件**，用于只能观测到「一个 agent 回合结束」、无法观测到
+文件读取/编辑/命令等细粒度动作的接入源（例如 Codex Desktop 的 `notify` hook）。它**不代表整个
+任务完成**，只代表当前这一回合结束，所以默认**不做庆祝**，避免每个回合都触发 completed。
+
+处理规则（第一版）：
+
+- 若 `payload.outcome === "completed"` → 按 `completed` 处理（展示产物、庆祝一次）。
+- 否则 → 只记录一条动作，桌宠安静回到 `idle`（不庆祝）。
+
+```json
+{
+  "type": "turn_ended",
+  "agent": "codex",
+  "adapter": "codex-desktop-notify",
+  "sessionId": "sess_2f9c",
+  "taskId": "task_1183",
+  "payload": {
+    "action": "Codex 完成一个回合"
+  }
+}
+```
+
+> `payload` 里只放非敏感摘要（如固定文案 action、可选的短 `outcome` 枚举）。**绝不包含**
+> 对话正文、prompt、代码或密钥。
+
 ## 5. 事件 → 桌宠状态映射
 
 | 事件 `type` | 桌宠可视状态 | 备注 |
@@ -307,6 +334,7 @@ Codex / Claude Code / Cursor / generic-cli / custom agent
 | `permission_resolved` | 恢复之前相位 | 清除等待；可带 `resumePhase` |
 | `blocked` / `error` | blocked（阻塞） | 需要用户操作 |
 | `completed` | completed（完成） | 展示产物后回落待机 |
+| `turn_ended` | idle（待机）/ completed（完成） | 粗粒度：默认安静回 idle；`payload.outcome === "completed"` 才庆祝 |
 | `idle` | idle（待机） | |
 
 ## 6. 未知事件与向前兼容
