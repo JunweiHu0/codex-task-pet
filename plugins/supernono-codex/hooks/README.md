@@ -1,79 +1,77 @@
-# SuperNoNo Codex hooks (prototype)
+# SuperNoNo Codex hooks
 
-Hook scripts that translate Codex lifecycle events into
+Hook scripts that translate **official** Codex lifecycle events into
 [SuperNoNo protocol events](../../../docs/supernono-signal-protocol.md) via the
 shared sender [`adapters/shared/send-signal.js`](../../../adapters/shared/send-signal.js).
 
-> **PROTOTYPE / UNVERIFIED.** The Codex hooks payload shape, event names, and
-> `hooks.json` format are **not confirmed** on this machine (see
-> [../README.md](../README.md) for the probe results). Every script parses
-> **defensively** and no-ops on anything it doesn't recognise. Nothing here is
-> installed into Codex.
+The hooks API is officially supported ([docs](https://developers.openai.com/codex/hooks)).
+`hooks.json` here targets that schema. The scripts still parse **defensively**
+(official fields first, fallbacks kept) and no-op on anything unrecognised, so a
+schema drift degrades gracefully instead of breaking Codex.
 
 ## Files
 
 | file | role |
 | --- | --- |
-| `lib.js` | shared: defensive payload reader, redaction/summaries, mappers, `send()` |
+| `hooks.json` | official hooks config: `matcher` + `hooks[]` command handlers |
+| `lib.js` | official-field parsing, redaction/summaries, mappers, `metaOf`, `send()` |
 | `pre-tool-use.js` | `PreToolUse` → `command_running` / `file_reading` / `file_editing` |
 | `post-tool-use.js` | `PostToolUse` → `step_done` (or `error` on failure) |
 | `permission-request.js` | `PermissionRequest` → `permission_required` |
-| `manual-fixture-test.js` | drives the mappers with simulated payloads (no real hooks needed) |
-| `hooks.json` | best-guess hook manifest (UNVERIFIED format) |
+| `manual-fixture-test.js` | drives the mappers with simulated official payloads |
 
-## Mapping (all input field names are UNVERIFIED guesses)
+## hooks.json shape (official)
 
-**PreToolUse** (`lib.mapPreToolUse`)
+```json
+{ "hooks": { "PreToolUse": [ { "matcher": "Bash",
+  "hooks": [ { "type": "command",
+               "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+               "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+               "timeout": 5, "statusMessage": "Updating SuperNoNo" } ] } ] } } }
+```
 
-| detected tool | SuperNoNo event |
+- `matcher` is a regex on `tool_name`; `"*"` / `""` / omit = catch-all.
+- `timeout` is in **seconds** (docs default 600; we use 5).
+- `${PLUGIN_ROOT}` is the plugin's installed root (env var Codex provides).
+
+## Official payload fields (parsed first)
+
+| field | use |
 | --- | --- |
-| shell / bash / exec / command / a command with no file | `command_running` |
-| ↳ command matches test/lint/build (`npm test`, `eslint`, `tsc`, …) | `command_running` with `payload.isTest = true` → pet shows *validating* |
-| apply_patch / patch / edit / write / create | `file_editing` |
-| read / search / grep / glob / cat / list / find | `file_reading` |
-| unknown tool name | `command_running` (generic "using tool") |
-| nothing recognisable | *no event sent* |
+| `tool_name` | classify the tool (canonical `Bash`, `apply_patch`, `Edit`, `Write`, `mcp__…`) |
+| `tool_input.command` | Bash / apply_patch command → short masked summary |
+| `tool_input.path` / `.file_path` | file basename for read/edit |
+| `tool_response` | PostToolUse: small status fields only (exit_code/success/error) |
+| `turn_id` → `taskId`, `session_id` → `sessionId` | envelope correlation ids |
 
-**PostToolUse** (`lib.mapPostToolUse`)
+Defensive fallbacks (`tool` / `toolName` / `input.*` / `command` / …) remain in
+`lib.js` in case a field name differs.
 
-| detected result | SuperNoNo event |
+## Mapping
+
+**PreToolUse**
+
+| tool | event |
 | --- | --- |
-| success / exitCode 0 / ok | `step_done` |
-| test success | `step_done` with `payload.rule = "testPass"` |
-| failure / error / non-zero exit | `error` (pet shows blocked; cleared at the next `turn_ended`) |
-| undetermined | `step_done` (logs an action only) |
+| `Bash` | `command_running` (test/lint/build → `isTest` → *validating*) |
+| `apply_patch` / `Edit` / `Write` | `file_editing` |
+| read/search names (incl. `mcp__…read…`) | `file_reading` |
+| other `mcp__…` / unknown | `command_running` (generic) |
 
-**PermissionRequest** (`lib.mapPermissionRequest`) → `permission_required` with a
-short, secret-masked command summary.
+**PostToolUse** → `step_done` (test → `rule:"testPass"`); clear failure → `error`
+(cleared at the next `turn_ended`). **PermissionRequest** → `permission_required`.
 
-## Defensive parsing — unconfirmed points
+## Safety
 
-Because the real payload is unknown, `lib.js` tries many field names and settles
-for a no-op if none match. **These are the assumptions to verify against a real
-Codex hook payload:**
-
-- tool name key: tried `tool` / `toolName` / `tool_name` / `name` / `type`.
-- command key: tried `command` / `cmd` / `commandLine` / `args[]` / `input.*`.
-- file path key: tried `path` / `file` / `filePath` / `filename` / `input.*`.
-- result keys: tried `success` / `ok` / `error` / `exitCode` / `status`.
-- how the payload is delivered: tried a **JSON argv arg first**, then **piped
-  stdin JSON**. Real Codex may use a different transport.
-
-When the real schema is known, update the `*Of()` extractors and the classify
-regexes in `lib.js`, and the event/format in `hooks.json`.
-
-## Privacy
-
-- Commands are recorded only as **short summaries** (≤80 chars) with obvious
-  secrets masked (`Bearer …`, `sk-…`, `--password=…`).
-- Files are recorded as **basename only**, never full paths.
-- Prompt text, source code, full tool input, tokens and keys are **never** sent.
-- Hooks **never execute** any command from the payload; they only POST state.
-- If SuperNoNo isn't running, sends fail silently (Codex is unaffected).
+- Commands: ≤80-char summaries, secrets masked; files: basename only.
+- Never sends prompt / source / patch body / full tool output / tokens / keys.
+- Hooks **never** execute commands and **never** print a decision — no
+  `permissionDecision` / `decision` output, so Codex approval is untouched.
+- SuperNoNo off → silent failure; Codex unaffected.
 
 ## Run the fixture
 
 ```powershell
-npm start                                              # start SuperNoNo
+npm start
 node plugins/supernono-codex/hooks/manual-fixture-test.js
 ```

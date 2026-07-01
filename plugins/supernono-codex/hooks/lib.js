@@ -75,20 +75,37 @@ function baseName(p) {
 
 const TEST_RX = /\b(test|tests|jest|vitest|pytest|mocha|lint|eslint|tsc|typecheck|build|make|ctest|cargo\s+test|go\s+test)\b/i;
 
-function toolNameOf(p) {
-  return firstString(p.tool, p.toolName, p.tool_name, p.name, p.type).toLowerCase();
+// Official Codex hook payload carries tool args in `tool_input`; fall back to `input`.
+function toolInputOf(p) {
+  if (p && typeof p.tool_input === 'object' && p.tool_input) return p.tool_input;
+  if (p && typeof p.input === 'object' && p.input) return p.input;
+  return {};
 }
+// Prefer the official `tool_name` (canonical, e.g. "Bash", "apply_patch"); fallbacks kept.
+function toolNameOf(p) {
+  return firstString(p.tool_name, p.tool, p.toolName, p.name, p.type).toLowerCase();
+}
+// Prefer official `tool_input.command` (Bash / apply_patch use it); fallbacks kept.
 function commandOf(p) {
-  const inp = (p && typeof p.input === 'object') ? p.input : {};
+  const ti = toolInputOf(p);
   return firstString(
-    p.command, p.cmd, p.commandLine, inp.command, inp.cmd,
-    Array.isArray(p.args) ? p.args.join(' ') : '',
-    Array.isArray(inp.args) ? inp.args.join(' ') : ''
+    ti.command, ti.cmd, p.command, p.cmd, p.commandLine,
+    Array.isArray(ti.args) ? ti.args.join(' ') : '',
+    Array.isArray(p.args) ? p.args.join(' ') : ''
   );
 }
+// Prefer official `tool_input.{path,file_path}`; fallbacks kept.
 function pathOf(p) {
-  const inp = (p && typeof p.input === 'object') ? p.input : {};
-  return firstString(p.path, p.file, p.filePath, p.filename, inp.path, inp.file, inp.filePath);
+  const ti = toolInputOf(p);
+  return firstString(ti.path, ti.file_path, ti.filePath, ti.file, ti.filename, p.path, p.file, p.filePath, p.filename);
+}
+// Official correlation ids -> protocol envelope meta (non-sensitive).
+function metaOf(p) {
+  p = p && typeof p === 'object' ? p : {};
+  return {
+    sessionId: typeof p.session_id === 'string' ? p.session_id : null,
+    taskId: typeof p.turn_id === 'string' ? p.turn_id : null,
+  };
 }
 
 // PreToolUse -> a phase event, or null if we genuinely can't classify.
@@ -118,8 +135,14 @@ function mapPreToolUse(payload) {
 // PostToolUse -> step_done on success, error on a clear failure.
 function mapPostToolUse(payload) {
   const p = payload && typeof payload === 'object' ? payload : {};
-  const failed = p.success === false || p.ok === false || p.error != null ||
-    (typeof p.exitCode === 'number' && p.exitCode !== 0) || /fail|error/i.test(firstString(p.status));
+  // Official field is `tool_response`; inspect ONLY small status fields, never the output body.
+  const tr = (p.tool_response && typeof p.tool_response === 'object') ? p.tool_response : {};
+  const failed =
+    p.success === false || tr.success === false || p.ok === false || tr.ok === false ||
+    p.error != null || tr.error != null ||
+    (typeof p.exitCode === 'number' && p.exitCode !== 0) ||
+    (typeof tr.exit_code === 'number' && tr.exit_code !== 0) ||
+    /fail|error/i.test(firstString(p.status, tr.status));
   if (failed) return { type: 'error', payload: { action: 'Codex 工具执行失败' } };
 
   const isTest = p.isTest === true || TEST_RX.test(commandOf(p)) || TEST_RX.test(toolNameOf(p));
@@ -137,16 +160,21 @@ function mapPermissionRequest(payload) {
 
 /* ---- send --------------------------------------------------------------- */
 
-async function send(event) {
+async function send(event, meta) {
   if (!event || !event.type) return { ok: false, error: 'no event' };
+  meta = meta && typeof meta === 'object' ? meta : {};
   try {
-    return await sendSignal({ type: event.type, agent: AGENT, adapter: ADAPTER, payload: event.payload || {} });
+    return await sendSignal({
+      type: event.type, agent: AGENT, adapter: ADAPTER,
+      sessionId: meta.sessionId || null, taskId: meta.taskId || null,
+      payload: event.payload || {},
+    });
   } catch (_) {
     return { ok: false, error: 'send failed' };
   }
 }
 
 module.exports = {
-  readHookInput, mapPreToolUse, mapPostToolUse, mapPermissionRequest, send,
+  readHookInput, metaOf, mapPreToolUse, mapPostToolUse, mapPermissionRequest, send,
   safeCommandSummary, baseName,
 };

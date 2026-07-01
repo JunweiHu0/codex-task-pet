@@ -7,12 +7,14 @@
  * lib.js parses it defensively. This hook NEVER runs the command and NEVER
  * throws into Codex.
  */
-const { readHookInput, mapPreToolUse, send } = require('./lib');
+const { readHookInput, metaOf, mapPreToolUse, send } = require('./lib');
 
 (async () => {
   try {
-    const event = mapPreToolUse(readHookInput());
-    if (event) await send(event);
+    const payload = readHookInput();
+    const event = mapPreToolUse(payload);
+    if (event) await send(event, metaOf(payload));
   } catch (_) { /* never affect Codex */ }
+  // Emit no stdout: no permission decision, so Codex behaviour is unaffected.
   process.exit(0);
 })();

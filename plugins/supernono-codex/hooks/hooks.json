@@ -1,9 +1,70 @@
 {
-  "_note": "PROTOTYPE — UNVERIFIED. This hooks manifest is a BEST GUESS. No installed Codex plugin on this machine declares hooks, and no hooks.json schema is documented here, so the field names / event names / invocation format below WILL likely need to change once the real Codex hooks schema is confirmed. Do NOT treat this as installable. See ../README.md.",
-  "version": "0.1.0-prototype",
   "hooks": {
-    "PreToolUse": { "type": "command", "command": ["node", "${PLUGIN_DIR}/hooks/pre-tool-use.js"] },
-    "PostToolUse": { "type": "command", "command": ["node", "${PLUGIN_DIR}/hooks/post-tool-use.js"] },
-    "PermissionRequest": { "type": "command", "command": ["node", "${PLUGIN_DIR}/hooks/permission-request.js"] }
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "timeout": 5,
+            "statusMessage": "Updating SuperNoNo"
+          }
+        ]
+      },
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "timeout": 5,
+            "statusMessage": "Updating SuperNoNo"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
+            "timeout": 5,
+            "statusMessage": "Updating SuperNoNo"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/hooks/post-tool-use.js",
+            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\post-tool-use.js",
+            "timeout": 5,
+            "statusMessage": "Updating SuperNoNo"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/hooks/permission-request.js",
+            "command_windows": "node ${PLUGIN_ROOT}\\hooks\\permission-request.js",
+            "timeout": 5,
+            "statusMessage": "Updating SuperNoNo"
+          }
+        ]
+      }
+    ]
   }
 }
