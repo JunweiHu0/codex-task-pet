@@ -26,26 +26,28 @@ schema drift degrades gracefully instead of breaking Codex.
 ## hooks.json shape (official)
 
 ```json
-{ "hooks": { "PreToolUse": [ { "matcher": "Bash",
+{ "hooks": { "PreToolUse": [ { "matcher": "shell_command|Bash",
   "hooks": [ { "type": "command",
-               "command": "node ./hooks/pre-tool-use.js",
-               "command_windows": "node .\\hooks\\pre-tool-use.js",
+               "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+               "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
                "timeout": 5, "statusMessage": "Updating SuperNoNo" } ] } ] } } }
 ```
 
-- `matcher` is a regex on `tool_name`; `"*"` / `""` / omit = catch-all.
+- `matcher` is a regex on `tool_name`. For a **catch-all**, **omit** the `matcher`
+  field (as shipping plugins do — a literal `"*"` did not match on this version).
 - `timeout` is in **seconds** (docs default 600; we use 5).
-- `command` is **relative to the plugin install root**: Codex runs each hook with
-  its working directory set to the installed plugin folder
-  (`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`). Verified on
-  codex-cli 0.142.4; matches OpenAI's shipping plugins, whose hooks use relative
-  commands like `./scripts/foo.sh`.
+- **`${PLUGIN_ROOT}` is required** (Codex expands it to the installed plugin folder).
+  Codex runs each hook with **cwd = the project directory, NOT the plugin root**, so
+  a relative `./hooks/x.js` would not be found.
+- **`node` is not on Codex's hook PATH on Windows**, so `command_windows` uses the
+  absolute `C:\PROGRA~1\nodejs\node.exe` (8.3 short path — no spaces/quoting;
+  machine-specific). Verified on codex-cli 0.142.4.
 
 ## Official payload fields (parsed first)
 
 | field | use |
 | --- | --- |
-| `tool_name` | classify the tool (canonical `Bash`, `apply_patch`, `Edit`, `Write`, `mcp__…`) |
+| `tool_name` | classify the tool (`shell_command`/`Bash`, `apply_patch`, `Edit`, `Write`, `mcp__…`) |
 | `tool_input.command` | Bash / apply_patch command → short masked summary |
 | `tool_input.path` / `.file_path` | file basename for read/edit |
 | `tool_response` | PostToolUse: small status fields only (exit_code/success/error) |
@@ -60,7 +62,7 @@ Defensive fallbacks (`tool` / `toolName` / `input.*` / `command` / …) remain i
 
 | tool | event |
 | --- | --- |
-| `Bash` | `command_running` (test/lint/build → `isTest` → *validating*) |
+| `shell_command`/`Bash` | `command_running` (test/lint/build → `isTest` → *validating*) |
 | `apply_patch` / `Edit` / `Write` | `file_editing` |
 | read/search names (incl. `mcp__…read…`) | `file_reading` |
 | other `mcp__…` / unknown | `command_running` (generic) |

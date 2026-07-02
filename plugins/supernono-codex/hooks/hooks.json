@@ -2,12 +2,12 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "shell_command",
+        "matcher": "shell_command|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "node ./hooks/pre-tool-use.js",
-            "command_windows": "node .\\hooks\\pre-tool-use.js",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -18,8 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./hooks/pre-tool-use.js",
-            "command_windows": "node .\\hooks\\pre-tool-use.js",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -30,8 +30,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./hooks/pre-tool-use.js",
-            "command_windows": "node .\\hooks\\pre-tool-use.js",
+            "command": "node ${PLUGIN_ROOT}/hooks/pre-tool-use.js",
+            "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\pre-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -43,8 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./hooks/post-tool-use.js",
-            "command_windows": "node .\\hooks\\post-tool-use.js",
+            "command": "node ${PLUGIN_ROOT}/hooks/post-tool-use.js",
+            "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\post-tool-use.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }
@@ -56,8 +56,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ./hooks/permission-request.js",
-            "command_windows": "node .\\hooks\\permission-request.js",
+            "command": "node ${PLUGIN_ROOT}/hooks/permission-request.js",
+            "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\permission-request.js",
             "timeout": 5,
             "statusMessage": "Updating SuperNoNo"
           }

@@ -43,9 +43,10 @@ under it and resolves `path` relative to that root.
 
 ## Prerequisites
 
-- `node` must be resolvable in the environment Codex uses to run hook commands.
-  If it isn't on Codex's hook PATH, replace `node` in `hooks/hooks.json`
-  `command` / `command_windows` with an absolute path to a Node binary.
+- **Node** — on Windows, `node` is **not** on Codex's hook-exec PATH, so
+  `hooks.json` `command_windows` calls Node by absolute path
+  (`C:\PROGRA~1\nodejs\node.exe`, the space-free 8.3 short path). If your Node lives
+  elsewhere, update that path in each `command_windows`.
 - SuperNoNo running (`npm start`) — otherwise hooks fail silently (no harm).
 
 ## Install (verified commands)
@@ -72,12 +73,17 @@ Result on this machine:
 
 Confirm with `codex plugin list --json` (look for `supernono-codex@supernono-local`).
 
-> **Hook command paths are relative to the plugin install root.** Codex runs each
-> hook with its working directory set to the installed plugin folder
-> (`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`), so `hooks.json`
-> uses `node ./hooks/<script>.js`. This matches OpenAI's own shipping plugins,
-> whose hooks use relative commands like `./scripts/foo.sh`. (Earlier drafts used
-> `${PLUGIN_ROOT}` — that was a guess and has been removed.)
+> **How Codex invokes the hooks (verified via a diagnostic hook).** Codex runs each
+> hook with **cwd = the project directory, NOT the plugin root**, and provides a
+> **`PLUGIN_ROOT`** env var pointing at the installed plugin folder
+> (`~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`) which it **expands**
+> in the command string. So `hooks.json` uses `${PLUGIN_ROOT}/hooks/<script>.js` — a
+> relative `./hooks/...` would NOT resolve. On Windows, since `node` isn't on the
+> hook PATH, `command_windows` calls the absolute
+> `C:\PROGRA~1\nodejs\node.exe ${PLUGIN_ROOT}\hooks\<script>.js`. The payload arrives
+> on the hook's **stdin** as JSON. The shell tool's `tool_name` is `shell_command`
+> in Codex Desktop but `Bash` in `codex exec`, so the shell matcher is
+> `shell_command|Bash`.
 
 ## Editing the plugin later
 
@@ -118,8 +124,16 @@ approval) and watch the pet react. Plugin-hook events carry
 `adapter: "codex-plugin-hooks"` (distinct from the notify wrapper's
 `adapter: "codex-desktop-notify"`).
 
-If nothing happens, check: hooks **trusted**, `node` on Codex's hook PATH, and
-the `hooks.json` `command` resolving from the install root.
+Confirmed working end-to-end in Codex Desktop: a real `shell_command` call delivers
+`command_running` (PreToolUse) then `step_done` (PostToolUse), both with
+`adapter: "codex-plugin-hooks"`. If nothing happens, check: hooks **trusted**
+(re-approve after any hook edit), the absolute node path in `command_windows`
+matches your machine, and your Codex expands `${PLUGIN_ROOT}`.
+
+> The `legacy_notify` (config `notify`) chain is a **separate, unrelated** issue
+> (Windows command-line length — os error 206) tracked in the
+> [handoff notes](../../docs/2026-07-01-codex-plugin-hooks-handoff.md); it does not
+> affect these plugin hooks.
 
 ## Uninstall / rollback
 

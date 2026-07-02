@@ -4,6 +4,52 @@ Date: 2026-07-01
 
 This document captures the current debugging state for continuing the SuperNoNo Codex Desktop plugin hook work from another machine.
 
+## RESOLVED (2026-07-02) — hooks fire end-to-end
+
+Confirmed working in **Codex Desktop** (and via `codex exec`): a real `shell_command`
+call now delivers to the capture bridge:
+
+- `command_running` — adapter `codex-plugin-hooks` (PreToolUse)
+- `step_done` — adapter `codex-plugin-hooks` (PostToolUse)
+- (`turn_ended` — adapter `codex-desktop-notify`, from the independent notify wrapper)
+
+### Real root cause (the matcher was only part of it)
+
+A diagnostic hook that reported its own `cwd` / env / argv / stdin proved how Codex
+runs hook commands:
+
+1. **cwd = the project directory, NOT the plugin root.** The earlier switch to a
+   relative `./hooks/x.js` command therefore failed ("cannot find module"). Codex
+   provides a **`PLUGIN_ROOT`** env var (the installed plugin folder) and
+   **expands `${PLUGIN_ROOT}`** in the command string — so `${PLUGIN_ROOT}` is
+   **required**. (Removing it in the matcher-fix round was itself a regression.)
+2. **`node` is not on Codex's hook-exec PATH** (Windows) — a bare `node` fails to
+   spawn. `command_windows` uses an **absolute node path**
+   (`C:\PROGRA~1\nodejs\node.exe`, 8.3 short path — no spaces/quoting; machine-specific).
+3. Shell `tool_name` differs by surface — **`shell_command`** in Codex Desktop,
+   **`Bash`** in `codex exec` — so the shell matcher is **`shell_command|Bash`**.
+
+Also confirmed: the earlier "trusted but 0 events" state was this same bug — the
+Desktop hooks *were* firing but failing to spawn, and plugin-hook spawn failures are
+**not** written to `logs_2.sqlite` (only `legacy_notify` is), so they were invisible.
+It was never a reload/trust problem.
+
+### Final `hooks.json` shape (per hook)
+
+```json
+{ "type": "command",
+  "command": "node ${PLUGIN_ROOT}/hooks/<script>.js",
+  "command_windows": "C:\\PROGRA~1\\nodejs\\node.exe ${PLUGIN_ROOT}\\hooks\\<script>.js",
+  "timeout": 5, "statusMessage": "Updating SuperNoNo" }
+```
+
+PreToolUse matchers: `shell_command|Bash`, `apply_patch|Edit|Write`, `mcp__.*`.
+PostToolUse / PermissionRequest: **no** `matcher` (catch-all).
+
+> The sections below are the earlier investigation trail, kept for history. Where
+> they attribute the failure to "matcher mismatch", that was only a contributing
+> factor — the real root cause is the three points above.
+
 ## Current Goal
 
 Make the SuperNoNo Codex Desktop plugin hooks actually fire for tool usage, especially shell command execution, so the capture bridge receives plugin-side events such as command start, step done, and permission request.
