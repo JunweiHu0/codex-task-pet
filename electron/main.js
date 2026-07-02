@@ -12,8 +12,14 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
-const WIN_W = 340;
-const WIN_H = 660;
+// Default pet window: big enough for Nono + the status bar + a 2-line speech
+// bubble above it, but small enough not to occlude the desktop. The task panel
+// / settings need more room, so the tray temporarily grows the window to PANEL
+// size and the renderer shrinks it back to PET size when those overlays close.
+const PET_WIN_W = 210;
+const PET_WIN_H = 320;
+const PANEL_WIN_W = 340;
+const PANEL_WIN_H = 660;
 const MARGIN = 12;
 
 // Local event bridge (Milestone 1): loopback-only HTTP seam for agent adapters.
@@ -24,6 +30,7 @@ const BRIDGE_MAX_BODY = 64 * 1024; // reject /signal bodies larger than 64KB
 let win = null;
 let tray = null;
 let currentDock = 'bottom-right';
+let winMode = 'pet'; // 'pet' (small, default) | 'panel' (large, for task panel / settings)
 let serverUrl = null;
 
 const ASSET = (f) => path.join(__dirname, '..', 'assets', f);
@@ -149,11 +156,18 @@ function startBridgeServer() {
   });
 }
 
-function dockBounds(dock) {
+function winSize() {
+  return winMode === 'panel'
+    ? { w: PANEL_WIN_W, h: PANEL_WIN_H }
+    : { w: PET_WIN_W, h: PET_WIN_H };
+}
+
+function dockBounds(dock, size) {
+  const { w, h } = size || winSize();
   const { workArea } = screen.getPrimaryDisplay();
-  const right = workArea.x + workArea.width - WIN_W - MARGIN;
+  const right = workArea.x + workArea.width - w - MARGIN;
   const left = workArea.x + MARGIN;
-  const bottom = workArea.y + workArea.height - WIN_H - MARGIN;
+  const bottom = workArea.y + workArea.height - h - MARGIN;
   const top = workArea.y + MARGIN;
   switch (dock) {
     case 'bottom-left': return { x: left, y: bottom };
@@ -161,6 +175,19 @@ function dockBounds(dock) {
     case 'bottom-right':
     default: return { x: right, y: bottom };
   }
+}
+
+// Grow to panel size (task panel / settings) or shrink back to the pet. The
+// bottom-right corner stays anchored so Nono doesn't jump when the window
+// resizes — the extra space opens upward/leftward for the overlay.
+function setWinMode(mode) {
+  if (!win) return;
+  const next = mode === 'panel' ? 'panel' : 'pet';
+  if (next === winMode) return;
+  winMode = next;
+  const { w, h } = winSize();
+  const b = dockBounds(currentDock, { w, h });
+  win.setBounds({ x: b.x, y: b.y, width: w, height: h });
 }
 
 function loadIcon(file) {
@@ -175,10 +202,11 @@ function loadIcon(file) {
 }
 
 function createWindow() {
-  const pos = dockBounds(currentDock);
+  const { w, h } = winSize();            // starts in 'pet' mode -> small window
+  const pos = dockBounds(currentDock, { w, h });
   win = new BrowserWindow({
-    width: WIN_W,
-    height: WIN_H,
+    width: w,
+    height: h,
     x: pos.x,
     y: pos.y,
     frame: false,
@@ -231,9 +259,18 @@ function buildTray() {
   const icon = loadIcon('tray.png') || loadIcon('icon.png') || nativeImage.createEmpty();
   tray = new Tray(icon);
   tray.setToolTip('SuperNoNo — Codex 桌宠');
+  // Panel / settings / demo live here now (removed from the pet UI). Each shows
+  // the window, then asks the renderer to open the relevant overlay via the
+  // existing 'sn:command' channel.
+  const sendCmd = (cmd) => { if (win) { setVisible(true); win.webContents.send('sn:command', cmd); } };
+  // Panel / settings need room: show the window, grow to panel size, then open.
+  const openOverlay = (cmd) => { if (win) { setVisible(true); setWinMode('panel'); win.webContents.send('sn:command', cmd); } };
   const menu = Menu.buildFromTemplate([
-    { label: '显示 / 隐藏', click: () => toggleVisible() },
-    { label: '运行演示', click: () => win && win.webContents.send('sn:command', 'run-demo') },
+    { label: '显示 / 隐藏 Nono', click: () => toggleVisible() },
+    { type: 'separator' },
+    { label: '打开任务面板', click: () => openOverlay('open-panel') },
+    { label: '打开设置', click: () => openOverlay('open-settings') },
+    { label: '运行演示', click: () => sendCmd('run-demo') },
     { type: 'separator' },
     { label: '退出', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
@@ -256,6 +293,8 @@ ipcMain.on('sn:move-dock', (_e, dock) => {
 ipcMain.on('sn:set-visible', (_e, v) => setVisible(!!v));
 ipcMain.on('sn:require-attention', (_e, v) => { if (win && process.platform === 'win32') win.flashFrame(!!v); });
 ipcMain.on('sn:quit', () => { app.isQuitting = true; app.quit(); });
+// renderer asks to grow (panel/settings open) or shrink (all overlays closed)
+ipcMain.on('sn:resize-mode', (_e, mode) => setWinMode(mode === 'panel' ? 'panel' : 'pet'));
 
 /* ---- lifecycle -------------------------------------------------------- */
 const gotLock = app.requestSingleInstanceLock();

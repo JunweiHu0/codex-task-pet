@@ -47,13 +47,13 @@ body.sn-demo {
 
 .sn-root {
   position: fixed;
-  inset: 0;
+  inset: 0;                 /* fills the (now small) pet window; grows with it in panel mode */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: flex-end;
-  gap: 10px;
-  padding: 16px;
+  gap: 8px;
+  padding: 6px;
 }
 
 /* Dock positions (PRD §9.1) */

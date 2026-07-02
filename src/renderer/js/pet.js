@@ -18,6 +18,7 @@
     els.svg = document.querySelector('.sn-pet');
     els.cardState = document.querySelector('[data-field="card-state"]');
     els.cardAction = document.querySelector('[data-field="card-action"]');
+    els.hoverZone = document.querySelector('.sn-hover-zone');
     els.dot = q('sn-dot');
     els.root = document.body;
 
@@ -26,6 +27,55 @@
     window.addEventListener('sn-live2d-ready', onLive2DReady);
     window.addEventListener('sn-live2d-error', (e) => {
       console.warn('[SuperNoNo] Live2D unavailable, using SVG fallback.');
+    });
+
+    initAmbient();
+  }
+
+  /* ---- ambient hover interaction (goal C) --------------------------------
+   * A light "alive" reaction while the cursor is on the pet. It ONLY fires in
+   * calm states (idle/resting) so it can't interrupt or overwrite a real agent
+   * state — thinking/…/waiting_approval/blocked/completed each drive Live2D's
+   * own animation. It never touches signalAdapter; it's pure presentation.
+   */
+  const CALM_STATES = new Set(['idle', 'resting']);
+  const HOVER_MOTIONS = ['Happy', 'JoyJump', 'Dance'];
+
+  function initAmbient() {
+    // Bind to the no-drag hover zone (the card itself is a drag region and can
+    // swallow mouse events in Electron). Fall back to the card if absent.
+    const zone = els.hoverZone || els.card;
+    if (!zone) return;
+    let lastMotionAt = 0;
+    let nextGapMs = 4000;               // randomized 3.5–5.3s between reactions
+    let hoverTimer = null;
+
+    const canPlay = () => CALM_STATES.has(lastState) && (Date.now() - lastMotionAt) >= nextGapMs;
+
+    function bounceZone() {
+      zone.classList.remove('sn-hover-hi');
+      void zone.offsetWidth;            // restart the CSS animation
+      zone.classList.add('sn-hover-hi');
+      setTimeout(() => zone.classList.remove('sn-hover-hi'), 950);
+    }
+
+    function playAmbient() {
+      if (!canPlay()) return;
+      lastMotionAt = Date.now();
+      nextGapMs = 3500 + Math.floor(Math.random() * 1800);
+      bounceZone();                     // always-visible container bounce/tilt
+      if (live2dReady && window.desktopPet && window.desktopPet.playMotion) {
+        window.desktopPet.playMotion(HOVER_MOTIONS[Math.floor(Math.random() * HOVER_MOTIONS.length)]);
+      }
+    }
+
+    zone.addEventListener('mouseenter', () => {
+      if (hoverTimer) return;
+      playAmbient();                              // react on enter (throttled)
+      hoverTimer = setInterval(playAmbient, 1500); // canPlay() gates the 3.5–5s cadence
+    });
+    zone.addEventListener('mouseleave', () => {
+      if (hoverTimer) { clearInterval(hoverTimer); hoverTimer = null; }
     });
   }
 

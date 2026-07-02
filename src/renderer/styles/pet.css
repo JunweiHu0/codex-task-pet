@@ -4,8 +4,8 @@
 .sn-card {
   -webkit-app-region: drag;          /* drag the whole pet to move the window */
   position: relative;
-  width: 190px;
-  padding: 6px 6px 8px;
+  width: 168px;
+  padding: 4px 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13,23 +13,22 @@
 }
 .sn-card:active { cursor: grabbing; }
 
-.sn-card__toolbar {
-  position: absolute;
-  top: 0;
-  right: 2px;
+.sn-pet { display: block; width: 148px; height: auto; overflow: visible; color: var(--sn-c-neutral); }
+
+/* No-drag zone wrapping the pet visuals so hover reactions fire in Electron
+   (the surrounding card stays a drag handle via the status bar / padding). */
+.sn-hover-zone {
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 3;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center bottom;
 }
-.sn-card:hover .sn-card__toolbar { opacity: 1; transform: none; }
 
-.sn-pet { display: block; overflow: visible; color: var(--sn-c-neutral); }
-
-/* Live2D NoNo stage — replaces the SVG once the model is ready. */
-.sn-live2d-stage { display: none; width: 188px; height: 214px; pointer-events: auto; }
+/* Live2D NoNo stage — replaces the SVG once the model is ready. Compact so the
+   pet reads as a small desktop companion, not a dashboard. */
+.sn-live2d-stage { display: none; width: 156px; height: 178px; pointer-events: auto; }
 .sn-live2d-stage #sn-live2d-canvas { display: block; width: 100%; height: 100%; background: transparent; }
 body.sn-live2d-on .sn-live2d-stage { display: block; }
 body.sn-live2d-on .sn-pet { display: none; }
@@ -254,3 +253,19 @@ body[data-anim="off"] .sn-bang,
 body[data-anim="off"] .sn-body {
   animation: none !important;
 }
+
+/* =====================================================================
+ * AMBIENT HOVER (goal C) — a light "alive" reaction while the cursor is on
+ * the pet. Live2D plays its own motions (pet.js -> window.desktopPet.playMotion);
+ * this drives the SVG fallback. pet.js only adds the class in calm states and
+ * removes it after playing, so it never fights a real agent state.
+ * ===================================================================== */
+@keyframes snHoverHi {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); }
+  22%  { transform: translateY(-10px) rotate(-4deg) scale(1.05); }
+  48%  { transform: translateY(0) rotate(3deg) scale(1.02); }
+  72%  { transform: translateY(-4px) rotate(-2deg) scale(1.01); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+.sn-hover-zone.sn-hover-hi { animation: snHoverHi 0.9s ease-in-out; }
+body[data-anim="off"] .sn-hover-zone.sn-hover-hi { animation: none; }

@@ -21,6 +21,7 @@
     setVisible(v) { if (bridge && bridge.setVisible) bridge.setVisible(v); },
     requireAttention(v) { if (bridge && bridge.requireAttention) bridge.requireAttention(v); },
     quit() { if (bridge && bridge.quit) bridge.quit(); },
+    resizeMode(mode) { if (bridge && bridge.resizeMode) bridge.resizeMode(mode); },
   };
 
   /* ---- runtime state ---------------------------------------------------- */
@@ -71,6 +72,8 @@
       bridge.onCommand((cmd, arg) => {
         if (cmd === 'run-demo') SN.sim.runDemo();
         else if (cmd === 'force' && arg) SN.sim.force(arg);
+        else if (cmd === 'open-panel') openPanel();               // tray -> task panel
+        else if (cmd === 'open-settings') { SN.panel.close(); SN.settings.open(); syncWindowSize(); } // tray -> settings
       });
     }
   }
@@ -150,6 +153,16 @@
     card.style.display = min ? 'none' : '';
     dot.hidden = !min;
     if (min) { SN.bubble.hide(); SN.panel.close(); SN.settings.close(); }
+    syncWindowSize();
+  }
+
+  /* ---- window size follows overlay visibility (small pet <-> big panel) --- */
+  let winSizeMode = 'pet';
+  function syncWindowSize() {
+    const mode = (SN.panel.isOpen() || SN.settings.isOpen()) ? 'panel' : 'pet';
+    if (mode === winSizeMode) return;
+    winSizeMode = mode;
+    SN.native.resizeMode(mode);
   }
 
   /* ---- panels ----------------------------------------------------------- */
@@ -157,6 +170,7 @@
     SN.settings.close();
     SN.panel.render(petState, SN.signals.context);
     SN.panel.open();
+    syncWindowSize();
   }
 
   /* ---- event wiring ----------------------------------------------------- */
@@ -179,7 +193,7 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { SN.panel.close(); SN.settings.close(); }
+      if (e.key === 'Escape') { SN.panel.close(); SN.settings.close(); syncWindowSize(); }
     });
 
     // typing suppression for our own text fields (PRD §9.3)
@@ -192,9 +206,9 @@
   function handleAction(act, el) {
     switch (act) {
       case 'toggle-panel': SN.panel.isOpen() ? SN.panel.close() : openPanel(); break;
-      case 'close-panel': SN.panel.close(); break;
-      case 'settings': SN.panel.close(); SN.settings.toggle(); break;
-      case 'close-settings': SN.settings.close(); break;
+      case 'close-panel': SN.panel.close(); syncWindowSize(); break;
+      case 'settings': SN.panel.close(); SN.settings.toggle(); syncWindowSize(); break;
+      case 'close-settings': SN.settings.close(); syncWindowSize(); break;
       case 'hide': setMinimized(true); break;
       case 'open-artifact': {
         const p = el.dataset.path || (SN.signals.context.artifacts[0] && SN.signals.context.artifacts[0].path);

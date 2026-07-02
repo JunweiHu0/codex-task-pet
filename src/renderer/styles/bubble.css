@@ -3,14 +3,14 @@
 .sn-bubble {
   -webkit-app-region: no-drag;
   position: relative;
-  max-width: 230px;
+  max-width: 186px;            /* stay inside the ~198px small-window content box */
   padding: 9px 13px;
   background: var(--sn-surface);
   border: 1px solid var(--sn-border-strong);
   border-radius: 14px;
-  box-shadow: var(--sn-shadow);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.42); /* tighter than --sn-shadow so it isn't clipped */
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--sn-text);
   cursor: pointer;
   transform-origin: bottom right;
@@ -51,7 +51,7 @@ body[data-dock="bottom-left"] .sn-bubble__tail { right: auto; left: 26px; }
 
 .sn-bubble--critical {
   border-color: var(--sn-c-yellow);
-  box-shadow: 0 0 0 1px var(--sn-c-yellow), var(--sn-shadow);
+  box-shadow: 0 0 0 1px var(--sn-c-yellow), 0 6px 16px rgba(0, 0, 0, 0.42);
 }
 
 @keyframes snBubbleIn {

@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('SNNative', {
 
   quit: () => ipcRenderer.send('sn:quit'),
 
+  // grow to panel size / shrink back to the pet (driven by overlay visibility)
+  resizeMode: (mode) => ipcRenderer.send('sn:resize-mode', mode),
+
   // real Codex integration seam: main -> renderer task signals
   onSignal: (cb) => ipcRenderer.on('sn:signal', (_e, type, payload) => cb(type, payload)),
 

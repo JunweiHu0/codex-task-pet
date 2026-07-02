@@ -141,12 +141,12 @@
 
       <!-- The pet "dock card" (PRD §11.1). Draggable in Electron. -->
       <div id="sn-card" class="sn-card" data-state="idle">
-        <div class="sn-card__toolbar">
-          <button class="sn-iconbtn no-drag" data-act="toggle-panel" title="任务面板" aria-label="打开任务面板">▤</button>
-          <button class="sn-iconbtn no-drag" data-act="settings" title="设置" aria-label="打开设置">⚙</button>
-          <button class="sn-iconbtn no-drag" data-act="hide" title="隐藏" aria-label="隐藏桌宠">—</button>
-        </div>
+        <!-- No toolbar on the pet itself: panel / settings / hide live in the
+             Windows system tray menu (see electron/main.js buildTray). -->
 
+        <!-- Pet visuals live in a no-drag hover zone so hover reactions reliably
+             fire in Electron (the surrounding card is a drag region). -->
+        <div class="sn-hover-zone">
         <!-- Live2D NoNo renders here; the SVG below is the fallback. -->
         <div id="sn-live2d-stage" class="sn-live2d-stage" aria-hidden="true"></div>
 
@@ -252,6 +252,7 @@
           </g>
         </svg>
         <!-- ===================== /SuperNoNo SVG ===================== -->
+        </div><!-- /.sn-hover-zone -->
 
         <div class="sn-card__status">
           <span class="sn-card__dotstate" aria-hidden="true"></span>
