@@ -256,27 +256,14 @@
         <div class="sn-card__status">
           <span class="sn-card__dotstate" aria-hidden="true"></span>
           <span class="sn-card__statelabel" data-field="card-state">待机</span>
+          <span class="sn-card__action" data-field="card-action"></span>
         </div>
       </div>
 
-      <!-- Minimized entry point (PRD §9.1) -->
+      <!-- Minimized entry point (PRD §9.1) — shown only when the pet is hidden -->
       <button id="sn-dot" class="sn-dot no-drag" title="显示 SuperNoNo" aria-label="显示 SuperNoNo" hidden>
         <span class="sn-dot__core"></span>
       </button>
-
-      <!-- Developer / demo control strip (toggle with the ` key or ?dev) -->
-      <div id="sn-devbar" class="sn-devbar" hidden>
-        <strong>演示</strong>
-        <button data-demo="run">▶ 长任务流程</button>
-        <button data-sim="thinking">思考</button>
-        <button data-sim="scanning">扫描</button>
-        <button data-sim="building">施工</button>
-        <button data-sim="validating">验证</button>
-        <button data-sim="waiting_approval">等待授权</button>
-        <button data-sim="blocked">阻塞</button>
-        <button data-sim="completed">完成</button>
-        <button data-sim="idle">待机</button>
-      </div>
     </div>
 
     <script src="js/config.js"></script>

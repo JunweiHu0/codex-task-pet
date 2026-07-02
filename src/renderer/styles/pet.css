@@ -34,24 +34,42 @@
 body.sn-live2d-on .sn-live2d-stage { display: block; }
 body.sn-live2d-on .sn-pet { display: none; }
 
-/* status caption under the pet */
+/* small, light status bar under the pet: state dot + label + short action */
 .sn-card__status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 210px;
   margin-top: -6px;
   padding: 3px 12px;
   background: var(--sn-surface);
   border: 1px solid var(--sn-border);
   border-radius: 999px;
   font-size: 12px;
-  box-shadow: var(--sn-shadow);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
   color: var(--sn-text);
 }
 .sn-card__dotstate {
+  flex: none;
   width: 8px; height: 8px; border-radius: 50%;
   background: currentColor; color: var(--sn-c-neutral);
   box-shadow: 0 0 8px 1px currentColor;
+}
+.sn-card__statelabel { flex: none; }
+/* optional short action text; hidden when empty so the bar stays compact */
+.sn-card__action {
+  color: var(--sn-text-dim);
+  font-size: 11px;
+  max-width: 132px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sn-card__action:empty { display: none; }
+.sn-card__action:not(:empty)::before {
+  content: "·";
+  margin-right: 6px;
+  opacity: 0.55;
 }
 
 /* =====================================================================

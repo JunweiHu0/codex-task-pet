@@ -17,6 +17,7 @@
     els.card = q('sn-card');
     els.svg = document.querySelector('.sn-pet');
     els.cardState = document.querySelector('[data-field="card-state"]');
+    els.cardAction = document.querySelector('[data-field="card-action"]');
     els.dot = q('sn-dot');
     els.root = document.body;
 
@@ -49,6 +50,12 @@
     els.svg.setAttribute('aria-label', 'SuperNoNo：' + def.aria);
 
     if (els.cardState) els.cardState.textContent = def.label;
+
+    // short "what am I doing" line in the status bar (latest recorded action)
+    if (els.cardAction) {
+      const acts = (SN.signals && SN.signals.context && SN.signals.context.actions) || [];
+      els.cardAction.textContent = acts.length ? acts[acts.length - 1] : '';
+    }
 
     // expose colours as CSS vars so chips / dot / bubble can track state
     const stateColor = cfg.CATEGORY_COLOR[def.category] || 'var(--sn-c-neutral)';

@@ -48,10 +48,6 @@
     startTicker();
     maybeGreet();
 
-    // show the dev strip in browser demo or with ?dev / --dev
-    const params = new URLSearchParams(location.search);
-    if (!SN.native.isElectron || params.has('dev')) showDevbar(true);
-
     exposePublicApi();
   }
 
@@ -183,7 +179,6 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === '`') { e.preventDefault(); toggleDevbar(); }
       if (e.key === 'Escape') { SN.panel.close(); SN.settings.close(); }
     });
 
@@ -225,10 +220,6 @@
     SN.settings.sync();
     SN.bubble.show('提示已调整为「' + ({ active: '活跃', standard: '标准', quiet: '安静' }[next]) + '」', { critical: true });
   }
-
-  /* ---- dev strip -------------------------------------------------------- */
-  function showDevbar(v) { document.getElementById('sn-devbar').hidden = !v; }
-  function toggleDevbar() { const d = document.getElementById('sn-devbar'); d.hidden = !d.hidden; }
 
   /* ---- public API (real Codex integration entry point) ------------------ */
   function exposePublicApi() {

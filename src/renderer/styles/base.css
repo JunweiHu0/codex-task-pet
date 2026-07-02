@@ -135,39 +135,9 @@ body[data-dock="sidebar-top"] .sn-root { align-items: flex-end; justify-content:
   box-shadow: 0 0 10px 2px currentColor;
   color: var(--sn-c-neutral);
 }
-
-/* Developer / demo strip */
-.sn-devbar {
-  -webkit-app-region: no-drag;
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  max-width: 320px;
-  padding: 8px 10px;
-  background: var(--sn-surface);
-  border: 1px solid var(--sn-border);
-  border-radius: 12px;
-  box-shadow: var(--sn-shadow);
-  font-size: 12px;
-  z-index: 50;
-}
-.sn-devbar strong { color: var(--sn-text-dim); font-weight: 600; margin-right: 4px; }
-.sn-devbar button {
-  -webkit-app-region: no-drag;
-  appearance: none;
-  border: 1px solid var(--sn-border);
-  background: var(--sn-surface-2);
-  color: var(--sn-text);
-  padding: 4px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.sn-devbar button:hover { background: rgba(255, 255, 255, 0.12); }
+/* The minimized dot only appears while the pet is hidden; the explicit display
+   above would otherwise defeat the [hidden] attribute and leave a floating orb. */
+.sn-dot[hidden] { display: none; }
 
 /* Accessibility: reduced motion -> no animation (PRD §16) */
 @media (prefers-reduced-motion: reduce) {
