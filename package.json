@@ -1,7 +1,7 @@
 {
   "name": "supernono",
   "productName": "SuperNoNo",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "SuperNoNo for Codex — a super-powered desktop pet that visualizes Codex's working state, energy, ability modules and long-task progress.",
   "main": "electron/main.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "dev": "electron . --dev",
     "demo": "node tools/serve.js",
     "icons": "node tools/make-icons.js",
-    "build:live2d": "esbuild tools/live2d/sn-entry.js --bundle --format=iife --target=es2020 --outfile=src/renderer/assets/live2d/live2d.bundle.js"
+    "build:live2d": "esbuild tools/live2d/sn-entry.js --bundle --format=iife --target=es2020 --outfile=src/renderer/assets/live2d/live2d.bundle.js",
+    "package:win": "npm run build:live2d && node tools/package-win-portable.js"
   },
   "keywords": [
     "desktop-pet",
