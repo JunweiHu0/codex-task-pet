@@ -36,6 +36,17 @@
             </span>
           </div>
 
+          <!-- Multiagent overview (Phase 1). Hidden until a real agent reports,
+               so the single-agent panel looks exactly like v1.0. -->
+          <div class="sn-ma" data-field="ma" hidden>
+            <div class="sn-ma__summary" data-field="ma-summary"></div>
+            <h4 class="sn-panel__h">Agents</h4>
+            <ul class="sn-ma__cards" data-field="ma-cards"></ul>
+            <h4 class="sn-panel__h">最近事件</h4>
+            <ul class="sn-ma__timeline" data-field="ma-timeline"></ul>
+            <h4 class="sn-panel__h sn-ma__divider">当前关注</h4>
+          </div>
+
           <h4 class="sn-panel__h">当前任务</h4>
           <p class="sn-panel__task" data-field="task-title">暂无进行中的任务</p>
 
@@ -271,6 +282,7 @@
     <script src="js/prefs.js"></script>
     <script src="js/signalAdapter.js"></script>
     <script src="js/stateEngine.js"></script>
+    <script src="js/agentStore.js"></script>
     <script src="js/pet.js"></script>
     <script src="js/bubble.js"></script>
     <script src="js/panel.js"></script>

@@ -25,7 +25,8 @@
   };
 
   /* ---- runtime state ---------------------------------------------------- */
-  let petState = SN.engine.initial();
+  // Mirrors the focused agent's PetState (kept in the multiagent store).
+  let petState = SN.agents ? SN.agents.getFocusedState() : SN.engine.initial();
   let lastAnnounced = null;
   let tickHandle = null;
 
@@ -52,19 +53,22 @@
     exposePublicApi();
   }
 
-  /* ---- signals -> engine -> render -------------------------------------- */
+  /* ---- signals -> agent store -> engine -> render ------------------------ */
   function subscribeSignals() {
-    SN.signals.onChange((signalType, payload) => {
-      const live = SN.signals.liveSignalTypes();
-      petState = SN.engine.onSignal(signalType, payload, live, petState);
+    // All events (bridge, public API, simulator via SN.signals) flow through
+    // the multiagent store; the pet body renders the focused agent only.
+    SN.agents.onChange(({ entry, focusKey }) => {
+      petState = SN.agents.getFocusedState();
       render();
-      announce(petState, SN.signals.context);
-      SN.native.requireAttention(petState.requiresUserAction);
+      // Bubble only for the focused agent, so a background agent's routine
+      // events can't spam over the one that currently matters.
+      if (entry.key === focusKey) announce(petState, SN.agents.getFocusedContext(), entry);
+      SN.native.requireAttention(SN.agents.anyRequiresAction());
     });
 
     // accept signals pushed from the Electron main process (real integration seam)
     if (bridge && bridge.onSignal) {
-      bridge.onSignal((type, payload) => SN.signals.emit(type, payload || {}));
+      bridge.onSignal((type, payload) => SN.agents.handleSignal(type, payload || {}));
     }
 
     // tray / menu commands
@@ -81,25 +85,27 @@
   function startTicker() {
     clearInterval(tickHandle);
     tickHandle = setInterval(() => {
-      const next = SN.engine.tick(petState);
-      if (next !== petState && next.state !== petState.state) {
-        petState = next;
+      // Tick every agent's state (decay/falloff), then follow the focus.
+      const { focusChanged } = SN.agents.tick();
+      const next = SN.agents.getFocusedState();
+      const stateChanged = next.state !== petState.state;
+      petState = next;
+      if (stateChanged || focusChanged) {
         render();
-      } else {
-        petState = next;
-        // light refresh of energy bar while a panel is open
-        if (SN.panel.isOpen()) SN.panel.render(petState, SN.signals.context);
+      } else if (SN.panel.isOpen()) {
+        // light refresh of energy bar / agent cards while the panel is open
+        SN.panel.render(petState, SN.agents.getFocusedContext());
       }
     }, 1000);
   }
 
   function render() {
     SN.pet.render(petState);
-    if (SN.panel.isOpen()) SN.panel.render(petState, SN.signals.context);
+    if (SN.panel.isOpen()) SN.panel.render(petState, SN.agents.getFocusedContext());
   }
 
   /* ---- bubbles ---------------------------------------------------------- */
-  function announce(state, ctx) {
+  function announce(state, ctx, entry) {
     const s = state.state;
     if (!ANNOUNCEABLE.includes(s)) { lastAnnounced = s; return; }
     if (s === lastAnnounced && !cfg.CRITICAL_STATES.includes(s)) return;
@@ -118,6 +124,9 @@
     } else if (s === 'blocked' && ctx.blockReason) {
       msg = '我卡在「' + ctx.blockReason + '」';
     }
+
+    // Multiagent: say which agent this is about (default/local stays unprefixed).
+    if (entry && entry.agent) msg = '[' + entry.agent + '] ' + msg;
 
     const accent = cfg.CATEGORY_COLOR[cfg.STATES[s].category];
     SN.bubble.show(msg, { critical, accent });
@@ -168,7 +177,7 @@
   /* ---- panels ----------------------------------------------------------- */
   function openPanel() {
     SN.settings.close();
-    SN.panel.render(petState, SN.signals.context);
+    SN.panel.render(petState, SN.agents.getFocusedContext());
     SN.panel.open();
     syncWindowSize();
   }
@@ -211,7 +220,8 @@
       case 'close-settings': SN.settings.close(); syncWindowSize(); break;
       case 'hide': setMinimized(true); break;
       case 'open-artifact': {
-        const p = el.dataset.path || (SN.signals.context.artifacts[0] && SN.signals.context.artifacts[0].path);
+        const arts = SN.agents.getFocusedContext().artifacts;
+        const p = el.dataset.path || (arts[0] && arts[0].path);
         if (p) SN.native.openPath(p);
         break;
       }
@@ -235,14 +245,20 @@
     SN.bubble.show('提示已调整为「' + ({ active: '活跃', standard: '标准', quiet: '安静' }[next]) + '」', { critical: true });
   }
 
-  /* ---- public API (real Codex integration entry point) ------------------ */
+  /* ---- public API (real agent integration entry point) ------------------ */
   function exposePublicApi() {
     global.SuperNoNo = {
-      signal: (type, payload) => SN.signals.emit(type, payload || {}),
+      // payload may carry agent/sessionId to target a specific agent entry;
+      // without them it drives the default (single-agent) entry as before.
+      signal: (type, payload) => SN.agents.handleSignal(type, payload || {}),
       force: (state) => SN.sim.force(state),
       runDemo: () => SN.sim.runDemo(),
       getState: () => ({ ...petState }),
-      getContext: () => SN.signals.context,
+      getContext: () => SN.agents.getFocusedContext(),
+      // multiagent debugging surface (Phase 1)
+      getAgents: () => SN.agents.getAgents(),
+      getTimeline: () => SN.agents.getTimeline(),
+      getFocusedAgent: () => SN.agents.getFocusedAgent(),
       prefs: SN.prefs,
       setTyping: (v) => SN.bubble.setTyping(v),
     };

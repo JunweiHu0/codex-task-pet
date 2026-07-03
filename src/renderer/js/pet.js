@@ -101,9 +101,12 @@
 
     if (els.cardState) els.cardState.textContent = def.label;
 
-    // short "what am I doing" line in the status bar (latest recorded action)
+    // short "what am I doing" line in the status bar (latest recorded action,
+    // read from the focused agent so it matches what the pet body shows)
     if (els.cardAction) {
-      const acts = (SN.signals && SN.signals.context && SN.signals.context.actions) || [];
+      const ctx = SN.agents ? SN.agents.getFocusedContext()
+        : (SN.signals && SN.signals.context);
+      const acts = (ctx && ctx.actions) || [];
       els.cardAction.textContent = acts.length ? acts[acts.length - 1] : '';
     }
 

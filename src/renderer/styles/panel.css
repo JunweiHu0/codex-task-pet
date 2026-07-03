@@ -139,3 +139,55 @@ body[data-anim="off"] .sn-settings { animation: none; }
   background: var(--sn-surface-2);
 }
 .sn-panel__foot .sn-btn { flex: 1; }
+
+/* ---- multiagent overview (Phase 1) ---- */
+.sn-ma { display: flex; flex-direction: column; gap: 4px; }
+.sn-ma[hidden] { display: none; }
+
+.sn-ma__summary { display: flex; gap: 12px; font-size: 12px; color: var(--sn-text-dim); }
+.sn-ma__summary b { color: var(--sn-text); font-weight: 600; }
+.sn-ma__summary [data-hot="true"],
+.sn-ma__summary [data-hot="true"] b { color: var(--sn-c-yellow); }
+
+.sn-ma__cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sn-agent-card {
+  border: 1px solid var(--sn-border);
+  border-radius: 10px;
+  padding: 7px 9px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.sn-agent-card[data-focused="true"] { border-color: var(--sn-agent-color, var(--sn-border-strong)); }
+.sn-agent-card[data-attn="true"] { background: rgba(255, 197, 61, 0.07); }
+
+.sn-agent-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sn-agent-card__name { font-size: 12.5px; font-weight: 600; }
+.sn-agent-card__state {
+  font-size: 11.5px; color: var(--sn-text-dim);
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.sn-agent-card__state::before {
+  content: "";
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sn-agent-color, var(--sn-c-neutral));
+  box-shadow: 0 0 6px 1px var(--sn-agent-color, var(--sn-c-neutral));
+}
+.sn-agent-card__line {
+  font-size: 12px; color: var(--sn-text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sn-agent-card__meta { font-size: 11px; color: var(--sn-text-dim); }
+.sn-agent-card[data-attn="true"] .sn-agent-card__meta { color: var(--sn-c-yellow); }
+
+.sn-ma__timeline {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 140px; overflow-y: auto;
+}
+.sn-ma__timeline li {
+  font-size: 11.5px; color: var(--sn-text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sn-ma__timeline li b { color: var(--sn-text); font-weight: 600; }
+
+.sn-ma__divider { margin-top: 10px; }

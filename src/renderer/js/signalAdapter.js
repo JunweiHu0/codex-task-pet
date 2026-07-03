@@ -262,5 +262,9 @@
     }
   }
 
+  // Export the class so the multiagent store (agentStore.js) can create one
+  // isolated instance per agent/session. SN.signals stays the default instance
+  // (single-agent compatibility: simulator/demo/legacy events keep working).
+  SN.SignalAdapter = SignalAdapter;
   SN.signals = new SignalAdapter();
 })(typeof window !== 'undefined' ? window : globalThis);
