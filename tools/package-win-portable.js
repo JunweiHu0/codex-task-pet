@@ -33,13 +33,35 @@ const appFiles = [
   '.agents',
 ];
 
+const excludedAppFiles = new Set([
+  'adapters/codex-desktop/notify-wrapper.config.json',
+  'adapters/codex-desktop/notify-observed.json',
+]);
+
+const excludedAppBasenames = new Set([
+  'capture-log.jsonl',
+  'hook_diag.txt',
+]);
+
 function rm(target) {
   fs.rmSync(target, { recursive: true, force: true });
 }
 
-function copy(src, dest) {
+function normalizeRel(file) {
+  return file.split(path.sep).join('/');
+}
+
+function shouldCopyAppFile(src) {
+  const rel = normalizeRel(path.relative(root, src));
+  if (excludedAppFiles.has(rel)) return false;
+  if (excludedAppBasenames.has(path.basename(src))) return false;
+  if (path.basename(src).startsWith('_diag')) return false;
+  return true;
+}
+
+function copy(src, dest, options = {}) {
   if (!fs.existsSync(src)) return;
-  fs.cpSync(src, dest, { recursive: true });
+  fs.cpSync(src, dest, { recursive: true, ...options });
 }
 
 function ensureDir(dir) {
@@ -69,7 +91,14 @@ rm(defaultApp);
 const appDir = path.join(outDir, 'resources', 'app');
 ensureDir(appDir);
 for (const file of appFiles) {
-  copy(path.join(root, file), path.join(appDir, file));
+  copy(path.join(root, file), path.join(appDir, file), { filter: shouldCopyAppFile });
+}
+
+for (const file of excludedAppFiles) {
+  const packagedPath = path.join(appDir, ...file.split('/'));
+  if (fs.existsSync(packagedPath)) {
+    throw new Error(`Refusing to package local runtime file: ${file}`);
+  }
 }
 
 const electronExe = path.join(outDir, 'electron.exe');
@@ -87,6 +116,7 @@ const releaseReadme = [
   'Notes:',
   '- The local signal bridge listens on http://127.0.0.1:4174 while the app is running.',
   '- Codex plugin hooks and adapter files are included under resources/app/plugins and resources/app/adapters.',
+  '- Local notify-wrapper runtime files are intentionally excluded from this package.',
   '- This package is portable and does not install shortcuts or auto-updates.',
   '',
 ].join('\r\n');
