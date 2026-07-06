@@ -16,6 +16,7 @@
     els.ma = els.panel.querySelector('[data-field="ma"]');
     els.maSummary = els.panel.querySelector('[data-field="ma-summary"]');
     els.maCards = els.panel.querySelector('[data-field="ma-cards"]');
+    els.maFilter = els.panel.querySelector('[data-field="ma-filter"]');
     els.maTimeline = els.panel.querySelector('[data-field="ma-timeline"]');
     els.stateLabel = els.panel.querySelector('[data-field="state-label"]');
     els.energyFill = els.panel.querySelector('[data-field="energy-fill"]');
@@ -59,6 +60,19 @@
 
   const ACTIVE_STATES = ['thinking', 'scanning', 'building', 'validating'];
 
+  // Display names for known agents; unknown agents show their raw (safe) id.
+  const AGENT_LABELS = { codex: 'Codex', 'claude-code': 'Claude Code', local: '本地' };
+  const agentLabel = (a) => AGENT_LABELS[a] || a;
+
+  // "abcdef…wxyz" — enough to tell sessions apart without eating the row.
+  function shortSession(s) {
+    if (typeof s !== 'string' || !s) return '';
+    return s.length > 12 ? s.slice(0, 6) + '…' + s.slice(-4) : s;
+  }
+
+  // Timeline filter state (in-memory only). 'all' or an agent id.
+  let timelineFilter = 'all';
+
   function renderMultiagent() {
     if (!els.ma || !SN.agents) return;
     const agents = SN.agents.getAgents();
@@ -81,52 +95,135 @@
       els.maSummary.appendChild(span);
     }
 
-    // agent cards
+    renderAgentCards(agents);
+    renderTimeline();
+  }
+
+  /* Agent cards: click = manual focus (click again to release); pin button =
+   * hard focus lock. All externally-sourced text goes through textContent. */
+  function renderAgentCards(agents) {
     els.maCards.innerHTML = '';
     for (const a of agents) {
       const def = cfg.STATES[a.state] || cfg.STATES.idle;
       const li = document.createElement('li');
-      li.className = 'sn-agent-card';
+      li.className = 'sn-agent-card no-drag';
       li.dataset.focused = a.focused ? 'true' : 'false';
       li.dataset.attn = a.requiresUserAction ? 'true' : 'false';
+      li.dataset.pinned = a.pinned ? 'true' : 'false';
+      li.dataset.stale = a.stale ? 'true' : 'false';
       li.style.setProperty('--sn-agent-color', cfg.CATEGORY_COLOR[def.category] || 'var(--sn-c-neutral)');
+      li.title = a.pinned ? '已固定关注此 agent'
+        : a.manualFocused ? '点击取消手动关注'
+          : '点击关注此 agent';
+      li.addEventListener('click', () => { if (SN.agents.setManualFocus) SN.agents.setManualFocus(a.key); });
 
+      // head: name | state + pin
       const head = document.createElement('div');
       head.className = 'sn-agent-card__head';
       const name = document.createElement('span');
       name.className = 'sn-agent-card__name';
-      name.textContent = a.agent + (a.sessionId ? ' · ' + a.sessionId.slice(0, 8) : '');
+      name.textContent = agentLabel(a.agent);
+      const right = document.createElement('span');
+      right.className = 'sn-agent-card__headright';
       const state = document.createElement('span');
       state.className = 'sn-agent-card__state';
       state.textContent = def.label;
+      const pin = document.createElement('button');
+      pin.type = 'button';
+      pin.className = 'sn-agent-card__pin no-drag';
+      pin.textContent = a.pinned ? '已固定' : '固定';
+      pin.title = a.pinned ? '取消固定，恢复自动关注' : '固定关注此 agent（授权/阻塞仍会提醒）';
+      pin.setAttribute('aria-pressed', a.pinned ? 'true' : 'false');
+      pin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (a.pinned) SN.agents.unpinAgent();
+        else SN.agents.pinAgent(a.key);
+      });
+      right.appendChild(state);
+      right.appendChild(pin);
       head.appendChild(name);
-      head.appendChild(state);
+      head.appendChild(right);
       li.appendChild(head);
 
+      // latest action (truncated by CSS, full text on hover)
       const line = document.createElement('div');
       line.className = 'sn-agent-card__line';
       line.textContent = a.lastAction || a.title || '';
+      if (a.lastAction) line.title = a.lastAction;
       li.appendChild(line);
 
+      // meta: adapter · session short · relative time · badges
       const meta = document.createElement('div');
       meta.className = 'sn-agent-card__meta';
-      meta.textContent = relTime(a.lastEventAt) + (a.requiresUserAction ? ' · 需要你处理' : '');
+      const bits = [];
+      if (a.adapter) bits.push(a.adapter);
+      const sess = shortSession(a.sessionId);
+      if (sess) bits.push(sess);
+      bits.push(relTime(a.lastEventAt));
+      const metaText = document.createElement('span');
+      metaText.className = 'sn-agent-card__metaText';
+      metaText.textContent = bits.join(' · ');
+      meta.appendChild(metaText);
+      if (a.stale) {
+        const stale = document.createElement('span');
+        stale.className = 'sn-badge sn-badge--stale';
+        stale.textContent = '可能卡住';
+        stale.title = '工作状态下超过 2 分钟没有新事件';
+        meta.appendChild(stale);
+      }
+      if (a.requiresUserAction) {
+        const attn = document.createElement('span');
+        attn.className = 'sn-badge sn-badge--attn';
+        attn.textContent = '需要你处理';
+        meta.appendChild(attn);
+      }
       li.appendChild(meta);
 
       els.maCards.appendChild(li);
     }
+  }
 
-    // timeline: newest first, latest 30
+  /* Timeline with per-agent filter. Filter buttons appear only when the
+   * timeline actually contains more than one agent. */
+  function renderTimeline() {
+    const all = SN.agents.getTimeline();
+
+    // filter row (first-seen order keeps codex/claude positions stable)
+    const seen = [];
+    for (const e of all) { if (!seen.includes(e.agent)) seen.push(e.agent); }
+    const showFilter = seen.length > 1;
+    els.maFilter.hidden = !showFilter;
+    els.maFilter.innerHTML = '';
+    if (showFilter) {
+      if (timelineFilter !== 'all' && !seen.includes(timelineFilter)) timelineFilter = 'all';
+      for (const val of ['all', ...seen]) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sn-ma__filterbtn no-drag';
+        btn.dataset.active = timelineFilter === val ? 'true' : 'false';
+        btn.textContent = val === 'all' ? '全部' : agentLabel(val);
+        btn.addEventListener('click', () => {
+          timelineFilter = val;
+          renderTimeline();
+        });
+        els.maFilter.appendChild(btn);
+      }
+    } else if (timelineFilter !== 'all') {
+      timelineFilter = 'all';
+    }
+
+    // events: apply filter, newest first, latest 30
     els.maTimeline.innerHTML = '';
-    const events = SN.agents.getTimeline().slice(-30).reverse();
+    const events = (timelineFilter === 'all' ? all : all.filter((e) => e.agent === timelineFilter))
+      .slice(-30).reverse();
     for (const e of events) {
       const li = document.createElement('li');
       const b = document.createElement('b');
-      b.textContent = e.agent;
-      li.appendChild(document.createTextNode(clock(e.at) + ' '));
+      b.textContent = agentLabel(e.agent);
+      li.appendChild(document.createTextNode(relTime(e.at) + ' '));
       li.appendChild(b);
       li.appendChild(document.createTextNode(' ' + e.type + (e.action ? ' — ' + e.action : '')));
-      li.title = e.action || e.type;
+      li.title = clock(e.at) + ' ' + (e.action || e.type);
       els.maTimeline.appendChild(li);
     }
   }

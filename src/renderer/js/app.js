@@ -107,9 +107,10 @@
   /* ---- bubbles ---------------------------------------------------------- */
   function announce(state, ctx, entry) {
     const s = state.state;
-    if (!ANNOUNCEABLE.includes(s)) { lastAnnounced = s; return; }
-    if (s === lastAnnounced && !cfg.CRITICAL_STATES.includes(s)) return;
-    lastAnnounced = s;
+    const announceKey = (entry && entry.key ? entry.key : 'default') + ':' + s;
+    if (!ANNOUNCEABLE.includes(s)) { lastAnnounced = announceKey; return; }
+    if (announceKey === lastAnnounced && !cfg.CRITICAL_STATES.includes(s)) return;
+    lastAnnounced = announceKey;
 
     const tone = SN.prefs.get('tone');
     const level = SN.prefs.get('notificationLevel');
@@ -259,6 +260,11 @@
       getAgents: () => SN.agents.getAgents(),
       getTimeline: () => SN.agents.getTimeline(),
       getFocusedAgent: () => SN.agents.getFocusedAgent(),
+      setManualFocus: (agentKey) => SN.agents.setManualFocus(agentKey),
+      clearManualFocus: () => SN.agents.clearManualFocus(),
+      pinAgent: (agentKey) => SN.agents.pinAgent(agentKey),
+      unpinAgent: () => SN.agents.unpinAgent(),
+      getPinnedAgent: () => SN.agents.getPinnedAgent(),
       prefs: SN.prefs,
       setTyping: (v) => SN.bubble.setTyping(v),
     };

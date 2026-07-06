@@ -48,6 +48,16 @@
     return STATE_RANK[entry.petState.state] || 0;
   }
 
+  // Rank at or above which an agent's state may break through a pin / manual
+  // focus: the user must never miss a "needs me" state because of a pin.
+  const ATTENTION_RANK = 40; // blocked(40), waiting_approval(50)
+
+  // Working states used by the panel's staleness hint (Phase 2.4): an agent in
+  // one of these with no new event for STALE_MS is flagged "possibly stuck".
+  // waiting_approval is NOT here — waiting on the user is not staleness.
+  const WORKING_STATES = new Set(['thinking', 'scanning', 'building', 'validating']);
+  const STALE_MS = 2 * 60 * 1000;
+
   // Coarse "settle" events (what the notify wrapper can send). When they arrive
   // WITHOUT a sessionId they must never be routed onto a session that is
   // waiting on the user — they would clear its pending approval/block.
@@ -62,6 +72,8 @@
       this.agents = new Map(); // key -> entry
       this.events = [];        // ring buffer, newest last
       this.focusKey = DEFAULT_KEY;
+      this.pinnedKey = null;      // hard focus lock (panel pin), in-memory only
+      this.manualFocusKey = null; // soft focus choice (panel card click)
       this._listeners = new Set();
 
       // The default entry wraps the pre-existing SN.signals instance so that
@@ -133,6 +145,7 @@
       let victim = null;
       for (const e of this.agents.values()) {
         if (e.key === DEFAULT_KEY || e.key === this.focusKey || e.key === protectedKey) continue;
+        if (e.key === this.pinnedKey || e.key === this.manualFocusKey) continue; // user's explicit choices
         if (rankOf(e) > 0) continue; // never drop an entry that still matters
         if (!victim || e.lastEventAt < victim.lastEventAt) victim = e;
       }
@@ -181,7 +194,8 @@
 
     /* ---- attention policy ------------------------------------------------ */
 
-    _recomputeFocus() {
+    /** Attention policy v0: highest rank wins, ties -> most recently active. */
+    _autoPick() {
       let best = this.agents.get(this.focusKey) || this.agents.get(DEFAULT_KEY);
       for (const e of this.agents.values()) {
         if (!best) { best = e; continue; }
@@ -189,11 +203,83 @@
         const rb = rankOf(best);
         if (r > rb || (r === rb && e.lastEventAt > best.lastEventAt)) best = e;
       }
-      const next = best ? best.key : DEFAULT_KEY;
+      return best || null;
+    }
+
+    /**
+     * Focus resolution (Phase 2.4): three layers on top of each other.
+     *   pin    — hard lock; only an ATTENTION-rank state (waiting_approval /
+     *            blocked) on ANOTHER agent may break through, and only while
+     *            it is live. The user must never miss a "needs me" state.
+     *   manual — card-click choice; holds against recency ties, but a strictly
+     *            higher rank elsewhere breaks (and clears) it.
+     *   auto   — attention policy v0 (rank, then recency).
+     */
+    _recomputeFocus() {
+      // hygiene: never point at evicted entries
+      if (this.pinnedKey && !this.agents.has(this.pinnedKey)) this.pinnedKey = null;
+      if (this.manualFocusKey && !this.agents.has(this.manualFocusKey)) this.manualFocusKey = null;
+
+      const auto = this._autoPick();
+      let next;
+      if (this.pinnedKey) {
+        const breakthrough = auto && auto.key !== this.pinnedKey && rankOf(auto) >= ATTENTION_RANK;
+        next = breakthrough ? auto.key : this.pinnedKey;
+      } else if (this.manualFocusKey) {
+        const manual = this.agents.get(this.manualFocusKey);
+        if (auto && auto.key !== this.manualFocusKey && rankOf(auto) > rankOf(manual)) {
+          this.manualFocusKey = null; // escalation elsewhere breaks the manual choice
+          next = auto.key;
+        } else {
+          next = this.manualFocusKey;
+        }
+      } else {
+        next = auto ? auto.key : DEFAULT_KEY;
+      }
+
       const changed = next !== this.focusKey;
       this.focusKey = next;
       return changed;
     }
+
+    /* ---- manual focus / pin (panel controls, in-memory only) -------------- */
+
+    _focusOp() {
+      const changed = this._recomputeFocus();
+      // Reuse the normal notify path so app.js re-renders pet + panel without
+      // any wiring changes; entry = focused entry so bubbles follow the switch.
+      this._notify({ type: '__focus', payload: {}, entry: this.getFocusedEntry(), focusChanged: changed, focusKey: this.focusKey });
+      return changed;
+    }
+
+    /** Card click. Clicking the current manual choice again clears it (toggle). */
+    setManualFocus(agentKey) {
+      if (!this.agents.has(agentKey)) return false;
+      this.manualFocusKey = this.manualFocusKey === agentKey ? null : agentKey;
+      this._focusOp();
+      return true;
+    }
+
+    clearManualFocus() {
+      this.manualFocusKey = null;
+      this._focusOp();
+    }
+
+    /** At most one pinned agent; pinning supersedes any manual choice. */
+    pinAgent(agentKey) {
+      if (!this.agents.has(agentKey)) return false;
+      this.pinnedKey = agentKey;
+      this.manualFocusKey = null;
+      this._focusOp();
+      return true;
+    }
+
+    unpinAgent() {
+      this.pinnedKey = null;
+      this._focusOp();
+    }
+
+    getPinnedAgent() { return this.pinnedKey; }
 
     /** Time-driven update (~1/sec): tick every entry, then re-pick focus. */
     tick() {
@@ -225,6 +311,7 @@
      *  The default entry is included only once it has actually seen events. */
     getAgents() {
       const out = [];
+      const now = Date.now();
       for (const e of this.agents.values()) {
         if (e.key === DEFAULT_KEY && !e.lastEventAt) continue;
         const acts = e.signals.context.actions;
@@ -241,6 +328,11 @@
           lastEventAt: e.lastEventAt,
           lastEventType: e.lastEventType,
           focused: e.key === this.focusKey,
+          manualFocused: e.key === this.manualFocusKey,
+          pinned: e.key === this.pinnedKey,
+          // "possibly stuck": working state with no new event for STALE_MS.
+          // Panel hint only — the pet state itself is not changed.
+          stale: WORKING_STATES.has(e.petState.state) && e.lastEventAt > 0 && (now - e.lastEventAt) > STALE_MS,
         });
       }
       out.sort((a, b) => b.lastEventAt - a.lastEventAt);
