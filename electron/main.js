@@ -26,6 +26,14 @@ const MARGIN = 12;
 const BRIDGE_PORT = Number(process.env.SUPERNONO_BRIDGE_PORT || 4174);
 const BRIDGE_PROTOCOL_VERSION = '0.1.0';
 const BRIDGE_MAX_BODY = 64 * 1024; // reject /signal bodies larger than 64KB
+const BRIDGE_ALLOWED_HOSTS = new Set([
+  `127.0.0.1:${BRIDGE_PORT}`,
+  `localhost:${BRIDGE_PORT}`,
+]);
+const BLOCKED_OPEN_EXTENSIONS = new Set([
+  '.bat', '.cmd', '.com', '.cpl', '.exe', '.js', '.jse', '.lnk', '.msi',
+  '.msp', '.ps1', '.scr', '.vbe', '.vbs', '.wsf',
+]);
 
 let win = null;
 let tray = null;
@@ -90,7 +98,22 @@ function startBridgeServer() {
     res.end(JSON.stringify(obj));
   };
 
+  const rejectBrowserOrSpoofedHost = (req, res) => {
+    if (req.headers.origin) {
+      json(res, 403, { ok: false, error: 'browser origin forbidden' });
+      return true;
+    }
+    const host = String(req.headers.host || '').toLowerCase();
+    if (host && !BRIDGE_ALLOWED_HOSTS.has(host)) {
+      json(res, 403, { ok: false, error: 'forbidden host' });
+      return true;
+    }
+    return false;
+  };
+
   const server = http.createServer((req, res) => {
+    if (rejectBrowserOrSpoofedHost(req, res)) return;
+
     if (req.method === 'GET' && req.url === '/health') {
       return json(res, 200, { ok: true, app: 'SuperNoNo', protocolVersion: BRIDGE_PROTOCOL_VERSION });
     }
@@ -282,8 +305,15 @@ function buildTray() {
 ipcMain.handle('sn:open-path', async (_e, p) => {
   if (!p) return;
   try {
-    const res = await shell.openPath(path.normalize(p));
-    if (res) shell.showItemInFolder(path.normalize(p)); // fall back to reveal
+    const target = path.normalize(String(p));
+    if (!fs.existsSync(target)) return;
+    const stat = fs.statSync(target);
+    if (!stat.isDirectory() && BLOCKED_OPEN_EXTENSIONS.has(path.extname(target).toLowerCase())) {
+      shell.showItemInFolder(target);
+      return;
+    }
+    const res = await shell.openPath(target);
+    if (res) shell.showItemInFolder(target); // fall back to reveal
   } catch (_) { /* ignore */ }
 });
 ipcMain.on('sn:move-dock', (_e, dock) => {
